@@ -5,8 +5,6 @@
     # 0: random simulation
     # 1: player vs random AI
     # 2: player vs player
-    
-# Last edited: June 10, 2020
 
 
 from graphics import *
@@ -71,6 +69,7 @@ class Board:
                 self._begin()
                 self._reset()
         """
+        #self._begin()
         
                 
     def _populate(self):  
@@ -94,10 +93,10 @@ class Board:
         turnColor = "black"
         while self != "loss":
             if turnColor == "black":
-                self = self._blackPlayer.takeTurn(self)
+                self._blackPlayer.takeTurn(self)
                 turnColor = "red"
             else:
-                self = self._redPlayer.takeTurn(self)
+                self._redPlayer.takeTurn(self)
                 turnColor = "black"
         print(turnColor, "player won")
 
@@ -211,17 +210,17 @@ class Piece(Circle):
                 nLoc = board.getTile(n).getLocation()
                 if nLoc.getX() > self._location.getX():
                     if nLoc.getY() > self._location.getY():
-                        jumps.append((n, self._tilenum-7)) # down-right
+                        jumps.append(Jump(n, self._tilenum-7)) # down-right
                     else:
-                        jumps.append((n, self._tilenum+9)) # up-right
+                        jumps.append(Jump(n, self._tilenum+9)) # up-right
                 else:
                     if nLoc.getY() > self._location.getY():
-                        jumps.append((n, self._tilenum-9)) # down-left
+                        jumps.append(Jump(n, self._tilenum-9)) # down-left
                     else:
-                        jumps.append((n, self._tilenum+7)) # up-left                        
+                        jumps.append(Jump(n, self._tilenum+7)) # up-left                        
         legalJumps = []
         for j in jumps:
-            if not self._isEdgeTile(j[0]) and not board.getTile(j[1]).isOccupied(): # tile to jump to is unoccupied
+            if not self._isEdgeTile(j.jumpedTile) and not board.getTile(j.endTile).isOccupied(): # tile to jump to is unoccupied
                 legalJumps.append(j)
         return tuple(legalJumps)
 
@@ -242,16 +241,20 @@ class Piece(Circle):
         return board
 
     def jumpTo(self, board, jump):
-        board = self.moveTo(board, jump[1])
-        board.getOpponent(self._color).killPiece(jump[0])
-        board.getTile(jump[0]).setOccupied(False)
+        board = self.moveTo(board, jump.endTile)
+        board.getOpponent(self._color).killPiece(jump.jumpedTile)
+        board.getTile(jump.jumpedTile).setOccupied(False)
         return board
 
     def doMove(self, board, tj):
-        try:
-            return self.jumpTo(board, tj)
-        except TypeError:
+        if isinstance(tj, int):
             return self.moveTo(board, tj)
+        else:
+            # tj is a list of Jumps
+            for j in tj[:-1]:
+                self.jumpTo(board, j)
+                sleep(CPU_DELAY)
+            return self.jumpTo(board, tj[-1])
 
     def isKing(self):
         return self._isKing
@@ -261,6 +264,13 @@ class Piece(Circle):
 
     def getLocation(self):
         return self._location
+
+
+class Jump:
+
+    def __init__(self, jumpedTile, endTile):
+        self.jumpedTile = jumpedTile
+        self.endTile = endTile
 
 
 class Player:
@@ -297,6 +307,8 @@ class Player:
         moves = ()
         jumps = ()
         jumpedJumps = list()
+        startTile = -1
+
         while True:
             
             if self._selected: # piece already selected
@@ -305,26 +317,30 @@ class Player:
 
                 
                 for jump in jumps: # if valid jump clicked: jump, deselect all and pass turn 
-                    if abs(click.getX()-board.getTile(jump[1]).getLocation().getX()) <= TILE_SIZE/2 and\
-                       abs(click.getY()-board.getTile(jump[1]).getLocation().getY()) <= TILE_SIZE/2:
+                    if abs(click.getX()-board.getTile(jump.endTile).getLocation().getX()) <= TILE_SIZE/2 and\
+                       abs(click.getY()-board.getTile(jump.endTile).getLocation().getY()) <= TILE_SIZE/2:
                         for tile in jumps:
-                            board.getTile(tile[1]).deselect()
+                            board.getTile(tile.endTile).deselect()
+
+                        if startTile < 0:
+                            startTile = self._selected.getTile()
+                        jumpedJumps.append(jump)
+
                         wasKing = self._selected.isKing()
                         board = self._selected.jumpTo(board, jump)
-                        jumpedJumps.append(jump)
 
                         # Check for double jumps
                         jumps = self._selected.getJumps(board)
                         if not (self._selected.isKing() and not wasKing) and len(jumps) > 0:
                             doubleJump = True
                             for jump in jumps:
-                                board.getTile(jump[1]).select()
+                                board.getTile(jump.endTile).select()
                         
                         else:
                             self._selected.deselect()
                             self._selected = None
-                            #return board
-                            return jumpedJumps
+                            
+                            return (startTile, jumpedJumps)
                     
                 for move in moves: # if valid move clicked: move, deselect all and pass turn
                     if abs(click.getX()-board.getTile(move).getLocation().getX()) <= TILE_SIZE/2 and\
@@ -343,7 +359,7 @@ class Player:
                 # else, deselect all
                 if not doubleJump:
                     for tile in jumps:
-                        board.getTile(tile[1]).deselect()
+                        board.getTile(tile.endTile).deselect()
                     for tile in moves:
                         board.getTile(tile).deselect()
                     self._selected.deselect()
@@ -359,7 +375,7 @@ class Player:
                         if self._canJump(board):
                             jumps = self._selected.getJumps(board)
                             for jump in jumps:
-                                board.getTile(jump[1]).select()
+                                board.getTile(jump.endTile).select()
                         else:
                             moves = self._selected.getMoves(board)
                             for tile in moves:
@@ -408,11 +424,6 @@ class CPUPlayer(Player):
                 score -= 1
         return score
 
-    def _pickMove(self, board, moves):  # BROKEN: causes all pieces to move
-        newBoard = None
-        for move in moves:
-            newBoard = move[0].doMove(board, move[1])
-
     def takeTurn(self, board):
         if self._noMoves(board):
             return "loss"
@@ -428,7 +439,7 @@ class CPUPlayer(Player):
             jump = choice(jumps)
             
             wasKing = jump[0].isKing()
-            board = jump[0].jumpTo(board, jump[1])
+            board = jump[0].jumpTo(board, Jump(jump[1]))
             if not (jump[0].isKing() and not wasKing):
                 while len(jump[0].getJumps(board)) > 0:
                     sleep(CPU_DELAY)
