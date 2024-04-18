@@ -45,12 +45,16 @@ class Tile(Rectangle):
 
 class Board:
 
-    def __init__(self, window):
-        self._window = window
+    def __init__(self):
+        self._window = GraphWin("Checkers",TILE_SIZE*8,TILE_SIZE*8)
+        self._window.setBackground("red")
         self._tiles = []
         self._populate()
         self._drawTiles()
 
+        self._blackPlayer = Player(self, "black")
+        self._redPlayer = Player(self, "red")
+        """
         if players == 2: 
             self._blackPlayer = Player(self, "black")
             self._redPlayer = Player(self, "red")
@@ -66,7 +70,9 @@ class Board:
                 self._redPlayer = CPUPlayer(self, "red")
                 self._begin()
                 self._reset()
+        """
         
+                
     def _populate(self):  
         y = TILE_SIZE * 8
         for row in range(4):     
@@ -290,11 +296,13 @@ class Player:
         
         moves = ()
         jumps = ()
+        jumpedJumps = list()
         while True:
             
             if self._selected: # piece already selected
                 click = board.getWindow().getMouse()
                 doubleJump = False
+
                 
                 for jump in jumps: # if valid jump clicked: jump, deselect all and pass turn 
                     if abs(click.getX()-board.getTile(jump[1]).getLocation().getX()) <= TILE_SIZE/2 and\
@@ -303,25 +311,34 @@ class Player:
                             board.getTile(tile[1]).deselect()
                         wasKing = self._selected.isKing()
                         board = self._selected.jumpTo(board, jump)
+                        jumpedJumps.append(jump)
+
+                        # Check for double jumps
                         jumps = self._selected.getJumps(board)
                         if not (self._selected.isKing() and not wasKing) and len(jumps) > 0:
                             doubleJump = True
                             for jump in jumps:
                                 board.getTile(jump[1]).select()
+                        
                         else:
                             self._selected.deselect()
                             self._selected = None
-                            return board
+                            #return board
+                            return jumpedJumps
                     
                 for move in moves: # if valid move clicked: move, deselect all and pass turn
                     if abs(click.getX()-board.getTile(move).getLocation().getX()) <= TILE_SIZE/2 and\
                        abs(click.getY()-board.getTile(move).getLocation().getY()) <= TILE_SIZE/2:
                         for tile in moves:
                             board.getTile(tile).deselect()
+
+                        packet = (self._selected.getTile(), move) # encode the move for sending
+
                         board = self._selected.moveTo(board, move)
                         self._selected.deselect()
                         self._selected = None
-                        return board
+
+                        return packet
                     
                 # else, deselect all
                 if not doubleJump:
@@ -364,6 +381,12 @@ class Player:
 
     def getPieces(self):
         return self._pieces
+    
+    def getPiece(self, tilenum):
+        for p in self._pieces:
+            if p.getTile() == tilenum:
+                return p
+        return None
 
 
 class CPUPlayer(Player):
@@ -427,6 +450,4 @@ class CPUPlayer(Player):
 
 if __name__ == "__main__":
     players = int(input("How many players? "))
-    window = GraphWin("Checkers",TILE_SIZE*8,TILE_SIZE*8)
-    window.setBackground("red")
-    Board(window)
+    Board()

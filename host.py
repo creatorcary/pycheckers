@@ -1,6 +1,7 @@
 # server.py
 import socket
 import pickle
+from checkers import *
 
 
 def start_server():
@@ -14,14 +15,24 @@ def start_server():
 
         with conn:
             print('Connected by', addr)
+
+            # Setup game
+            board = Board()
+            data = board._blackPlayer.takeTurn(board)
+            print(data)
+            
+            """
             data = conn.recv(1024)
             obj = pickle.loads(data)  # Convert bytes back to object
             print('Received object:', obj)
-
+"""
             # Send a response back to the client
-            response_obj = {"response": "Received your object!"}
-            response_data = pickle.dumps(response_obj)
+            #response_obj = {"response": "Received your object!"}
+            response_data = pickle.dumps(data)
             conn.sendall(response_data)
+
+            input()
+            
 
 
 if __name__ == "__main__":
