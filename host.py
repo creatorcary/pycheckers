@@ -18,18 +18,22 @@ def start_server():
 
             # Setup game
             board = Board()
-            data = board._blackPlayer.takeTurn(board)
-            print(data)
-            
-            """
-            data = conn.recv(1024)
-            obj = pickle.loads(data)  # Convert bytes back to object
-            print('Received object:', obj)
-"""
-            # Send a response back to the client
-            #response_obj = {"response": "Received your object!"}
-            response_data = pickle.dumps(data)
-            conn.sendall(response_data)
+
+            # Make a move
+            move = board._blackPlayer.takeTurn(board)
+            print(move)
+
+            # Serialize and send move to the client
+            packet = pickle.dumps(move)
+            conn.sendall(packet)
+
+            # Wait for a move from the client
+            packet = conn.recv(1024)
+            from_tile, move = pickle.loads(packet)
+            print('Received response:', from_tile, move)
+
+            # Update the board with the opponent's move
+            board._redPlayer.getPiece(from_tile).doMove(board, move)
 
             input()
             
