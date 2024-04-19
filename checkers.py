@@ -453,4 +453,6 @@ class CPUPlayer(Player):
 
 if __name__ == "__main__":
     players = int(input("How many players? "))
-    Board()
+    b = Board(players)
+    if players == 2:
+        b._begin()

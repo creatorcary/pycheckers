@@ -29,15 +29,21 @@ def start_server():
                 packet = pickle.dumps(move)
                 conn.sendall(packet)
 
+                if move == "loss":
+                    print("You lost...")
+                    break
+
                 # Wait for a move from the client
                 packet = conn.recv(1024)
-                from_tile, move = pickle.loads(packet)
-                print('Received response:', from_tile, move)
+                try:
+                    from_tile, move = pickle.loads(packet)
+                    print('Received response:', from_tile, move)
 
-                # Update the board with the opponent's move
-                board._redPlayer.getPiece(from_tile).doMove(board, move)
-
-            input()
+                    # Update the board with the opponent's move
+                    board._redPlayer.getPiece(from_tile).doMove(board, move)
+                except ValueError:
+                    print("You won!")
+                    break
 
 
 def start_client():
@@ -54,11 +60,15 @@ def start_client():
         while True:
             # Wait for a move from the host
             packet = s.recv(1024)
-            from_tile, move = pickle.loads(packet)  # Convert bytes back to object
-            print('Received response:', from_tile, move)
+            try:
+                from_tile, move = pickle.loads(packet)
+                print('Received response:', from_tile, move)
 
-            # Update the board with the opponent's move
-            board._blackPlayer.getPiece(from_tile).doMove(board, move)
+                # Update the board with the opponent's move
+                board._blackPlayer.getPiece(from_tile).doMove(board, move)
+            except ValueError:
+                print("You won!")
+                break
 
             # Make a move
             move = board._redPlayer.takeTurn(board)
@@ -68,7 +78,9 @@ def start_client():
             packet = pickle.dumps(move)
             s.sendall(packet)
 
-        input()
+            if move == "loss":
+                print("You lost...")
+                break
 
 
 if __name__ == "__main__":
