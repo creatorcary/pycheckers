@@ -22,7 +22,7 @@ def start_server(host='localhost'):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((host, port))
         s.listen(1)
-        print("Your IP address is", host)
+        print("Your IP address is", host, port)
         print("Waiting for someone to join...")
         conn, addr = s.accept()
 
@@ -60,7 +60,7 @@ def start_server(host='localhost'):
 
 def start_client(host='localhost'):
     port = 12345  # The same port as used by the server
-    print("Joining...")
+    print("Joining", host, port, "...")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
