@@ -4,18 +4,30 @@ import pickle
 from checkers import *
 
 
-def start_server():
-    host = 'localhost'  # Host IP
+def get_local_ip():
+    try:
+        # Create a socket and connect to an external service (e.g., Google's DNS server)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        return ""
+
+
+def start_server(host='localhost'):
     port = 12345  # Use a non-privileged port number
-    print("Waiting for someone to join...")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((host, port))
-        s.listen()
+        s.listen(1)
+        print("Your IP address is", host)
+        print("Waiting for someone to join...")
         conn, addr = s.accept()
 
         with conn:
-            print('Connected by', addr)
+            print('Connected to', addr)
 
             # Setup game
             board = Board()
@@ -46,8 +58,7 @@ def start_server():
                     break
 
 
-def start_client():
-    host = 'localhost'  # Server's IP
+def start_client(host='localhost'):
     port = 12345  # The same port as used by the server
     print("Joining...")
 
@@ -87,9 +98,21 @@ if __name__ == "__main__":
     players = int(input("How many players? "))
     if players == 2:
         if input("Host or join (H/J)? ").upper()[0] == 'H':
-            start_server()
+            myIP = get_local_ip()
+            if myIP:
+                start_server(myIP)
+            else:
+                print("Error fetching local IP address")
         else:
-            start_client()
+            host = input("Enter the host IP: ")
+            start_client(host)
     else:
         Board(players)
     
+
+
+
+import socket
+hostname = socket.gethostname()
+IPAddr = socket.gethostbyname(hostname)
+print(f"Your Computer IP Address is: {IPAddr}")
