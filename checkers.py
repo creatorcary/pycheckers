@@ -14,7 +14,7 @@ from time import sleep
 
 
 TILE_SIZE = 80
-CPU_DELAY = 1
+CPU_DELAY = .1
 
 
 class Tile(Rectangle):
@@ -43,20 +43,16 @@ class Tile(Rectangle):
 
 class Board:
 
-    def __init__(self):
+    def __init__(self, players=2):
         self._window = GraphWin("Checkers",TILE_SIZE*8,TILE_SIZE*8)
         self._window.setBackground("red")
         self._tiles = []
         self._populate()
         self._drawTiles()
-
-        self._blackPlayer = Player(self, "black")
-        self._redPlayer = Player(self, "red")
-        """
+       
         if players == 2: 
             self._blackPlayer = Player(self, "black")
             self._redPlayer = Player(self, "red")
-            self._begin()
         elif players == 1:
             self._blackPlayer = Player(self, "black")
             self._redPlayer = CPUPlayer(self, "red")
@@ -68,8 +64,6 @@ class Board:
                 self._redPlayer = CPUPlayer(self, "red")
                 self._begin()
                 self._reset()
-        """
-        #self._begin()
         
                 
     def _populate(self):  
@@ -91,12 +85,13 @@ class Board:
 
     def _begin(self):
         turnColor = "black"
-        while self != "loss":
+        status = ""
+        while status != "loss":
             if turnColor == "black":
-                self._blackPlayer.takeTurn(self)
+                status = self._blackPlayer.takeTurn(self)
                 turnColor = "red"
             else:
-                self._redPlayer.takeTurn(self)
+                status = self._redPlayer.takeTurn(self)
                 turnColor = "black"
         print(turnColor, "player won")
 
@@ -435,11 +430,10 @@ class CPUPlayer(Player):
                 for jump in piece.getJumps(board):
                     jumps.append((piece, jump))
 
-            # self._pickMove(board, jumps)  # BROKEN
             jump = choice(jumps)
             
             wasKing = jump[0].isKing()
-            board = jump[0].jumpTo(board, Jump(jump[1]))
+            board = jump[0].jumpTo(board, jump[1])
             if not (jump[0].isKing() and not wasKing):
                 while len(jump[0].getJumps(board)) > 0:
                     sleep(CPU_DELAY)
@@ -450,13 +444,11 @@ class CPUPlayer(Player):
                 for move in piece.getMoves(board):
                     moves.append((piece, move))
 
-            # self._pickMove(board, moves)  # BROKEN
             move = choice(moves)
             
             board = move[0].moveTo(board, move[1])
 
         self._genScore(board)    #BUGTEST
-        return board
 
 
 if __name__ == "__main__":
