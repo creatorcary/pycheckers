@@ -43,9 +43,12 @@ class Tile(Rectangle):
 
 class Board:
 
-    def __init__(self, players=2):
+    def __init__(self, players=2, invert=False):
         self._window = GraphWin("Checkers",TILE_SIZE*8,TILE_SIZE*8)
         self._window.setBackground("red")
+        if invert:
+            self._window.setCoords(TILE_SIZE*8, 0, 0, TILE_SIZE*8)
+
         self._tiles = []
         self._populate()
         self._drawTiles()
@@ -133,14 +136,21 @@ class Piece(Circle):
         return True
 
     def _genCrown(self, window):
-        p1 = Point(self._location.getX()-TILE_SIZE/8, self._location.getY()+TILE_SIZE/10)
-        p2 = Point(self._location.getX()-TILE_SIZE/5, self._location.getY()-TILE_SIZE/10)
-        p3 = Point(self._location.getX()-TILE_SIZE/10, self._location.getY()-TILE_SIZE/20)
-        p4 = Point(self._location.getX(), self._location.getY()-TILE_SIZE/5)
-        p5 = Point(self._location.getX()+TILE_SIZE/10, self._location.getY()-TILE_SIZE/20)
-        p6 = Point(self._location.getX()+TILE_SIZE/5, self._location.getY()-TILE_SIZE/10)
-        p7 = Point(self._location.getX()+TILE_SIZE/8, self._location.getY()+TILE_SIZE/10)
-        self._crown = Polygon([p1,p2,p3,p4,p5,p6,p7])
+        p1 = Point(-TILE_SIZE/8, TILE_SIZE/10)
+        p2 = Point(-TILE_SIZE/5, -TILE_SIZE/10)
+        p3 = Point(-TILE_SIZE/10, -TILE_SIZE/20)
+        p4 = Point(0, -TILE_SIZE/5)
+        p5 = Point(TILE_SIZE/10, -TILE_SIZE/20)
+        p6 = Point(TILE_SIZE/5, -TILE_SIZE/10)
+        p7 = Point(TILE_SIZE/8, TILE_SIZE/10)
+
+        points = [p1,p2,p3,p4,p5,p6,p7]
+        if window.trans:
+            points = [Point(self._location.getX() + p.x, self._location.getY() + p.y*-1) for p in points]
+        else:
+            points = [Point(self._location.getX() + p.x, self._location.getY() + p.y) for p in points]
+
+        self._crown = Polygon(points)
         self._crown.setFill("gold")
         self._crown.setOutline("gold")
         self._crown.draw(window)
@@ -453,6 +463,6 @@ class CPUPlayer(Player):
 
 if __name__ == "__main__":
     players = int(input("How many players? "))
-    b = Board(players)
+    b = Board(players=players)
     if players == 2:
         b._begin()

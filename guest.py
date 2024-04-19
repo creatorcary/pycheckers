@@ -12,7 +12,7 @@ def start_client():
         s.connect((host, port))
 
         # Setup game
-        board = Board()
+        board = Board(invert=True)
 
         while True:
             # Wait for a move from the host
