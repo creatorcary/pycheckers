@@ -108,11 +108,3 @@ if __name__ == "__main__":
             start_client(host)
     else:
         Board(players)
-    
-
-
-
-import socket
-hostname = socket.gethostname()
-IPAddr = socket.gethostbyname(hostname)
-print(f"Your Computer IP Address is: {IPAddr}")

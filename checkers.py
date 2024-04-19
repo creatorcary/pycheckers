@@ -14,7 +14,7 @@ from time import sleep
 
 
 TILE_SIZE = 80
-CPU_DELAY = .1
+CPU_DELAY = .5
 
 
 class Tile(Rectangle):
