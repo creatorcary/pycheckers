@@ -4,6 +4,9 @@ import pickle
 from checkers import *
 
 
+PORT = 22222
+
+
 def get_local_ip():
     try:
         # Create a socket and connect to an external service (e.g., Google's DNS server)
@@ -17,12 +20,10 @@ def get_local_ip():
 
 
 def start_server(host='localhost'):
-    port = 12345  # Use a non-privileged port number
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((host, port))
+        s.bind((host, PORT))
         s.listen(1)
-        print("Your IP address is", host, port)
+        print("Your IP address is", host, PORT)
         print("Waiting for someone to join...")
         conn, addr = s.accept()
 
@@ -59,11 +60,10 @@ def start_server(host='localhost'):
 
 
 def start_client(host='localhost'):
-    port = 12345  # The same port as used by the server
-    print("Joining", host, port, "...")
+    print("Joining", host, PORT, "...")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((host, port))
+        s.connect((host, PORT))
 
         # Setup game
         board = Board(invert=True)
