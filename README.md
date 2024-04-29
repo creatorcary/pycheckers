@@ -5,9 +5,9 @@ Find his library here: https://pypi.org/project/graphics.py/
 
 
 ## Installation
-`sudo pip install pycheckers`: for system-wide installation
+For system-wide installation: `sudo pip install pycheckers`
 
-`pip install pycheckers`: user installation
+User installation: `pip install pycheckers`
 
 
 ## Usage
