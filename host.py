@@ -42,18 +42,19 @@ def get_local_ip() -> str:
     momentarily connecting to Google's DNS server. If there is an error 
     connecting, return the empty string.
     """
+    hn = socket.gethostname()
     try:
         # Create a socket and connect to an external service (e.g., Google's DNS server)
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80))
         local_ip = s.getsockname()[0]
         s.close()
-        return local_ip
-    except Exception:
-        return ""
+        return local_ip, hn
+    except:
+        return "", hn
 
 
-def start_server(host='localhost') -> None:
+def start_server(ip="127.0.0.1", host="localhost") -> None:
     """
     Host a checkers game as the given IP address or hostname.
 
@@ -62,9 +63,9 @@ def start_server(host='localhost') -> None:
     until someone wins the game. Then terminate the connection. 
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((host, PORT))
+        s.bind((ip, PORT))
         s.listen(1)
-        print("Your IP address is", host, PORT)
+        print("Your IP address is", ip, "("+host+")")
         print("Waiting for someone to join...")
         conn, addr = s.accept()
 
@@ -100,18 +101,31 @@ def start_server(host='localhost') -> None:
                     break
 
 
-def start_client(host='localhost') -> None:
+def start_client(host='localhost') -> bool:
     """
     Join the checkers game hosted at the given IP address or hostname.
 
-    A bad request to connect will timeout. The joiner plays as red and goes 
-    second. Alternate sending moves back and forth over the network connection
-    until someone wins the game. Then terminate the connection. 
+    A bad request to connect will timeout after 10 seconds. The joiner plays as
+    red and goes second. Alternate sending moves back and forth over the 
+    network connection until someone wins the game. Then terminate the 
+    connection. 
     """
-    print("Joining", host, PORT, "...")
+    print("Joining", host, "...")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((host, PORT))
+        s.settimeout(10)
+        try:
+            s.connect((host, PORT))
+        except socket.gaierror:
+            print("Unknown host address.")
+            return False
+        except socket.timeout:
+            print("Connection timed out.")
+            return False
+        except ConnectionRefusedError:
+            print("Connection refused.")
+            return False
+        s.settimeout(None) # Allow moves to take any length of time
 
         # Setup game
         board = Board(invert=True)
@@ -140,13 +154,18 @@ def start_client(host='localhost') -> None:
             if move == "loss":
                 print("You lost...")
                 break
+    
+    return True # success
 
 
 if __name__ == "__main__":
     while True:
         try:
             players = int(input("How many players? "))
-            break
+            if players in (0,1,2):
+                break
+            else:
+                print("Enter either 0, 1, or 2.")
         except ValueError:
             print("Enter either 0, 1, or 2.")
 
@@ -160,17 +179,18 @@ if __name__ == "__main__":
 
                 if hj[0] == 'H':
                     # Host
-                    myIP = get_local_ip()
+                    myIP, myname = get_local_ip()
                     if myIP == "":
                         print("Error fetching local IP address.")
                     else:
-                        start_server(myIP)
+                        start_server(myIP, myname)
                         break
 
                 elif hj[0] == 'J':
                     # Join
-                    host = input("Enter the host IP: ")
-                    start_client(host)
+                    host = input("Enter the host IP or hostname: ")
+                    while not start_client(host):
+                        host = input("Enter the host IP or hostname: ")
                     break
 
                 else:
