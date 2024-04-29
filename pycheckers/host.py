@@ -29,7 +29,7 @@ start_client()
 
 import socket
 import pickle
-from checkers import *
+from pycheckers.checkers import *
 
 
 # The port number that the host should listen on
