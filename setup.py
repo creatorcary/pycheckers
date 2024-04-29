@@ -11,4 +11,10 @@ setup(
         "time",
         "graphics.py",
     ],
+    packages=["pycheckers"],
+    entry_points={
+        "console_scripts": [
+            "checkers = pycheckers.host:main",
+        ],
+    },
 )

@@ -158,7 +158,7 @@ def start_client(host='localhost') -> bool:
     return True # success
 
 
-if __name__ == "__main__":
+def main():
     while True:
         try:
             players = int(input("How many players? "))
@@ -204,3 +204,7 @@ if __name__ == "__main__":
     else:
         # Single player or sim
         Board(players)
+
+
+if __name__ == "__main__":
+    main()
