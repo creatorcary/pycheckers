@@ -21,15 +21,18 @@ PORT
 Functions
 ---------
 get_local_ip()
+send_move()
+recv_move()
 start_server()
 start_client()
+main()
 
 """
 
 
 import socket
 import pickle
-from pycheckers.checkers import *
+from pycheckers.checkers import Board
 
 
 # The port number that the host should listen on
@@ -52,6 +55,48 @@ def get_local_ip() -> str:
         return local_ip, hn
     except:
         return "", hn
+    
+
+def send_move(conn : socket.socket, board : Board, is_black=True) -> bool:
+    """
+    Allow a player to select a move and send it to the other player. If the 
+    game ends as the result of the move, return True. is_black specifies which
+    player is moving.
+    """
+    # Make a move
+    player = board._blackPlayer if is_black else board._redPlayer
+    move = player.takeTurn(board)
+
+    # Serialize and send move to the client
+    packet = pickle.dumps(move)
+    conn.sendall(packet)
+
+    if move == "loss":
+        print("You lost...")
+        return True
+    
+    return False
+
+
+def recv_move(conn : socket.socket, board : Board, is_black=True) -> bool:
+    """
+    Wait to receive a move from the other player, then update the board 
+    accordingly. If the game ends as the result of the move, return True. 
+    is_black specifies which player is moving.
+    """
+    # Wait for a move from the client
+    packet = conn.recv(1024)
+    try:
+        from_tile, move = pickle.loads(packet)
+
+        # Update the board with the opponent's move
+        player = board._blackPlayer if is_black else board._redPlayer
+
+        player.getPiece(from_tile).doMove(board, move)
+        return False
+    except ValueError:
+        print("You won!")
+        return True
 
 
 def start_server(ip="127.0.0.1", host="localhost") -> None:
@@ -76,28 +121,10 @@ def start_server(ip="127.0.0.1", host="localhost") -> None:
             board = Board()
 
             while True:
-                # Make a move
-                move = board._blackPlayer.takeTurn(board)
-                print(move)
-
-                # Serialize and send move to the client
-                packet = pickle.dumps(move)
-                conn.sendall(packet)
-
-                if move == "loss":
-                    print("You lost...")
+                if send_move(conn, board, is_black=True):
                     break
 
-                # Wait for a move from the client
-                packet = conn.recv(1024)
-                try:
-                    from_tile, move = pickle.loads(packet)
-                    print('Received response:', from_tile, move)
-
-                    # Update the board with the opponent's move
-                    board._redPlayer.getPiece(from_tile).doMove(board, move)
-                except ValueError:
-                    print("You won!")
+                if recv_move(conn, board, is_black=False):
                     break
 
 
@@ -131,34 +158,19 @@ def start_client(host='localhost') -> bool:
         board = Board(invert=True)
 
         while True:
-            # Wait for a move from the host
-            packet = s.recv(1024)
-            try:
-                from_tile, move = pickle.loads(packet)
-                print('Received response:', from_tile, move)
-
-                # Update the board with the opponent's move
-                board._blackPlayer.getPiece(from_tile).doMove(board, move)
-            except ValueError:
-                print("You won!")
+            if recv_move(s, board, is_black=True): 
                 break
 
-            # Make a move
-            move = board._redPlayer.takeTurn(board)
-            print(move)
-
-            # Serialize and send move to the host
-            packet = pickle.dumps(move)
-            s.sendall(packet)
-
-            if move == "loss":
-                print("You lost...")
+            if send_move(s, board, is_black=False):
                 break
     
     return True # success
 
 
-def main():
+def main() -> None:
+    """
+    Allow the user to select what kind of match to play, then set up the game.
+    """
     while True:
         try:
             players = int(input("How many players? "))

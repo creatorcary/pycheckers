@@ -1,14 +1,15 @@
-# Logan Cary
-# checkers.py
-# A single or two player checkers game, or a simulation of a checkers game
+"""
+checkers.py
+Logan Cary
+ 
+A single or two player checkers game, or a simulation of a checkers game
 
-    # 0: random simulation
-    # 1: player vs random AI
-    # 2: player vs player
-
+0: random simulation
+1: player vs random AI
+2: player vs player
+"""
 
 from graphics import *
-from tkinter import *
 from random import choice
 from time import sleep
 
