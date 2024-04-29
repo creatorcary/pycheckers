@@ -1,13 +1,47 @@
-# server.py
+"""
+host.py
+Author: Logan Cary
+
+This file is the entry point for hosting a game of checkers.
+When executed, it will allow the user to enter the number of players.
+
+Number of players:
+ 0 - simulation
+ 1 - single-player (PvE)
+ 2 - multiplayer (PvP)
+
+If multiplayer is selected, the user will be asked to either host or join. If
+hosting, the user's public IP address is displayed so that the person joining
+can copy it when they select join. 
+
+Globals
+-------
+PORT
+
+Functions
+---------
+get_local_ip()
+start_server()
+start_client()
+
+"""
+
+
 import socket
 import pickle
 from checkers import *
 
 
+# The port number that the host should listen on
 PORT = 22222
 
 
-def get_local_ip():
+def get_local_ip() -> str:
+    """
+    Determine and return the localhost's public IP address as a string by
+    momentarily connecting to Google's DNS server. If there is an error 
+    connecting, return the empty string.
+    """
     try:
         # Create a socket and connect to an external service (e.g., Google's DNS server)
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -19,7 +53,14 @@ def get_local_ip():
         return ""
 
 
-def start_server(host='localhost'):
+def start_server(host='localhost') -> None:
+    """
+    Host a checkers game as the given IP address or hostname.
+
+    Accept the first request to connect. The host plays as black and goes 
+    first. Alternate sending moves back and forth over the network connection
+    until someone wins the game. Then terminate the connection. 
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((host, PORT))
         s.listen(1)
@@ -59,7 +100,14 @@ def start_server(host='localhost'):
                     break
 
 
-def start_client(host='localhost'):
+def start_client(host='localhost') -> None:
+    """
+    Join the checkers game hosted at the given IP address or hostname.
+
+    A bad request to connect will timeout. The joiner plays as red and goes 
+    second. Alternate sending moves back and forth over the network connection
+    until someone wins the game. Then terminate the connection. 
+    """
     print("Joining", host, PORT, "...")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -95,16 +143,44 @@ def start_client(host='localhost'):
 
 
 if __name__ == "__main__":
-    players = int(input("How many players? "))
+    while True:
+        try:
+            players = int(input("How many players? "))
+            break
+        except ValueError:
+            print("Enter either 0, 1, or 2.")
+
     if players == 2:
-        if input("Host or join (H/J)? ").upper()[0] == 'H':
-            myIP = get_local_ip()
-            if myIP:
-                start_server(myIP)
+        # Multiplayer
+
+        while True:
+            hj = input("Host or join (H/J)? ").upper()
+            
+            if len(hj) > 0:
+
+                if hj[0] == 'H':
+                    # Host
+                    myIP = get_local_ip()
+                    if myIP == "":
+                        print("Error fetching local IP address.")
+                    else:
+                        start_server(myIP)
+                        break
+
+                elif hj[0] == 'J':
+                    # Join
+                    host = input("Enter the host IP: ")
+                    start_client(host)
+                    break
+
+                else:
+                    # Invalid option
+                    print("Invalid option.")
+
             else:
-                print("Error fetching local IP address")
-        else:
-            host = input("Enter the host IP: ")
-            start_client(host)
+                # Nothing entered
+                print("Enter an option.")
+
     else:
+        # Single player or sim
         Board(players)
