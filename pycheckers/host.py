@@ -29,9 +29,9 @@ main()
 
 """
 
-
-import socket
 import pickle
+import socket
+
 from pycheckers.checkers import Board
 
 
@@ -39,7 +39,7 @@ from pycheckers.checkers import Board
 PORT = 22222
 
 
-def get_local_ip() -> str:
+def get_local_ip() -> tuple[str, str]:
     """
     Determine and return the localhost's public IP address as a string by
     momentarily connecting to Google's DNS server. If there is an error 
@@ -57,7 +57,7 @@ def get_local_ip() -> str:
         return "", hn
     
 
-def send_move(conn : socket.socket, board : Board, is_black=True) -> bool:
+def send_move(conn: socket.socket, board: Board, is_black=True) -> bool:
     """
     Allow a player to select a move and send it to the other player. If the 
     game ends as the result of the move, return True. is_black specifies which
@@ -78,7 +78,7 @@ def send_move(conn : socket.socket, board : Board, is_black=True) -> bool:
     return False
 
 
-def recv_move(conn : socket.socket, board : Board, is_black=True) -> bool:
+def recv_move(conn: socket.socket, board: Board, is_black=True) -> bool:
     """
     Wait to receive a move from the other player, then update the board 
     accordingly. If the game ends as the result of the move, return True. 
@@ -92,14 +92,18 @@ def recv_move(conn : socket.socket, board : Board, is_black=True) -> bool:
         # Update the board with the opponent's move
         player = board._blackPlayer if is_black else board._redPlayer
 
-        player.getPiece(from_tile).doMove(board, move)
+        if piece := player.getPiece(from_tile):
+            piece.doMove(board, move)
+        else:
+            raise Exception("Received an invalid move from the opponent.")
+        
         return False
     except ValueError:
         print("You won!")
         return True
 
 
-def start_server(ip="127.0.0.1", host="localhost") -> None:
+def start_server(ip="127.0.0.1", host="localhost"):
     """
     Host a checkers game as the given IP address or hostname.
 
@@ -167,7 +171,7 @@ def start_client(host='localhost') -> bool:
     return True # success
 
 
-def main() -> None:
+def main():
     """
     Allow the user to select what kind of match to play, then set up the game.
     """

@@ -9,9 +9,10 @@ A single or two player checkers game, or a simulation of a checkers game
 2: player vs player
 """
 
-from graphics import *
 from random import choice
 from time import sleep
+
+from graphics import Circle, GraphWin, Point, Polygon, Rectangle
 
 
 TILE_SIZE = 80
@@ -20,7 +21,7 @@ CPU_DELAY = .5
 
 class Tile(Rectangle):
 
-    def __init__(self, x, y):
+    def __init__(self, x: int | float, y: int | float):
         Rectangle.__init__(self, Point(x,y), Point(x+TILE_SIZE,y-TILE_SIZE))
         self.setFill("black")
         self._location = Point(x+TILE_SIZE/2, y-TILE_SIZE/2) # center of tile
@@ -32,13 +33,13 @@ class Tile(Rectangle):
     def deselect(self):
         self.setOutline("black")
 
-    def isOccupied(self):
+    def isOccupied(self) -> bool:
         return self._isOccupied
 
     def setOccupied(self, tf=True):
         self._isOccupied = tf
 
-    def getLocation(self):
+    def getLocation(self) -> Point:
         return self._location
 
 
@@ -50,7 +51,7 @@ class Board:
         if invert:
             self._window.setCoords(TILE_SIZE*8, 0, 0, TILE_SIZE*8)
 
-        self._tiles = []
+        self._tiles: list[Tile] = []
         self._populate()
         self._drawTiles()
        
@@ -107,13 +108,13 @@ class Board:
         for piece in self._redPlayer.getPieces():
             piece.undraw()
 
-    def getWindow(self):
+    def getWindow(self) -> GraphWin:
         return self._window
 
-    def getTile(self, tilenum):
+    def getTile(self, tilenum: int) -> Tile:
         return self._tiles[tilenum]
 
-    def getOpponent(self, color):
+    def getOpponent(self, color: str) -> 'Player | CPUPlayer':
         if color == "black":
             return self._redPlayer
         return self._blackPlayer
@@ -121,7 +122,7 @@ class Board:
 
 class Piece(Circle):
 
-    def __init__(self, board, color, tilenum):
+    def __init__(self, board: Board, color: str, tilenum: int):
         self._color = color
         self._tilenum = tilenum
         self._isKing = False
@@ -131,12 +132,12 @@ class Piece(Circle):
         self.setOutline("white")
         self.draw(board.getWindow())
 
-    def _isEdgeTile(self, tilenum):
+    def _isEdgeTile(self, tilenum: int) -> bool:
         if tilenum > 3 and tilenum < 28 and tilenum % 8 != 0 and tilenum % 8 != 7:
             return False
         return True
 
-    def _genCrown(self, window):
+    def _genCrown(self, window: GraphWin):
         p1 = Point(-TILE_SIZE/8, TILE_SIZE/10)
         p2 = Point(-TILE_SIZE/5, -TILE_SIZE/10)
         p3 = Point(-TILE_SIZE/10, -TILE_SIZE/20)
@@ -167,7 +168,7 @@ class Piece(Circle):
     def deselect(self):
         self.setOutline("white")
 
-    def _getPosMoves(self):
+    def _getPosMoves(self) -> tuple[int, ...]:
         moves = []
         if self._isKing:
             tempmoves = []
@@ -199,7 +200,7 @@ class Piece(Circle):
 
         return tuple(moves)
 
-    def getMoves(self, board):
+    def getMoves(self, board: Board) -> tuple[int, ...]:
         neighbors = self._getPosMoves()
         moves = []
         for n in neighbors:
@@ -207,10 +208,10 @@ class Piece(Circle):
                 moves.append(n)
         return tuple(moves)
 
-    def getJumps(self, board): # (tile of piece to jump, empty tile to jump to)
+    def getJumps(self, board: Board) -> tuple['Jump', ...]: # (tile of piece to jump, empty tile to jump to)
         neighbors = self._getPosMoves()
         oppTiles = board.getOpponent(self._color).getTiles()
-        jumps = []
+        jumps: list[Jump] = []
         for n in neighbors:
             if n in oppTiles: # opponent piece occupies possible move tile
                 nLoc = board.getTile(n).getLocation()
@@ -230,7 +231,7 @@ class Piece(Circle):
                 legalJumps.append(j)
         return tuple(legalJumps)
 
-    def moveTo(self, board, tile):
+    def moveTo(self, board: Board, tile: int) -> Board:
         dx = board.getTile(tile).getLocation().getX() - self._location.getX()
         dy = board.getTile(tile).getLocation().getY() - self._location.getY()
         board.getTile(self._tilenum).setOccupied(False)
@@ -246,13 +247,13 @@ class Piece(Circle):
             self._genCrown(board.getWindow())
         return board
 
-    def jumpTo(self, board, jump):
+    def jumpTo(self, board: Board, jump: 'Jump') -> Board:
         board = self.moveTo(board, jump.endTile)
         board.getOpponent(self._color).killPiece(jump.jumpedTile)
         board.getTile(jump.jumpedTile).setOccupied(False)
         return board
 
-    def doMove(self, board, tj):
+    def doMove(self, board: Board, tj: int | list['Jump']) -> Board:
         if isinstance(tj, int):
             return self.moveTo(board, tj)
         else:
@@ -262,57 +263,57 @@ class Piece(Circle):
                 sleep(CPU_DELAY)
             return self.jumpTo(board, tj[-1])
 
-    def isKing(self):
+    def isKing(self) -> bool:
         return self._isKing
 
-    def getTile(self):
+    def getTile(self) -> int:
         return self._tilenum
 
-    def getLocation(self):
+    def getLocation(self) -> Point:
         return self._location
 
 
 class Jump:
 
-    def __init__(self, jumpedTile, endTile):
+    def __init__(self, jumpedTile: int, endTile: int):
         self.jumpedTile = jumpedTile
         self.endTile = endTile
 
 
 class Player:
 
-    def __init__(self, board, color):
+    def __init__(self, board: Board, color: str):
         self._color = color
-        self._pieces = []
+        self._pieces: list[Piece] = []
         self._populate(board)
-        self._selected = None
+        self._selected: Piece | None = None
 
-    def _populate(self, board):
+    def _populate(self, board: Board):
         startTile = 0
         if self._color == "red":
             startTile = 20
         for tile in range(startTile, startTile+12):
             self._pieces.append(Piece(board, self._color, tile))
 
-    def _canJump(self, board):
+    def _canJump(self, board: Board) -> bool:
         for piece in self._pieces:
             if len(piece.getJumps(board)) > 0:
                 return True
         return False
 
-    def _noMoves(self, board):
+    def _noMoves(self, board: Board) -> bool:
         for piece in self._pieces:
             if len(piece.getMoves(board)) > 0 or len(piece.getJumps(board)) > 0:
                 return False
         return True
 
-    def takeTurn(self, board):
+    def takeTurn(self, board: Board):
         if self._noMoves(board):
             return "loss"
         
         moves = ()
         jumps = ()
-        jumpedJumps = list()
+        jumpedJumps: list[Jump] = list()
         startTile = -1
 
         while True:
@@ -388,23 +389,23 @@ class Player:
                                 board.getTile(tile).select()
                         break
 
-    def killPiece(self, tilenum):
+    def killPiece(self, tilenum: int):
         for piece in self._pieces:
             if piece.getTile() == tilenum:
                 self._pieces.remove(piece)
                 piece.undraw()
                 break
 
-    def getTiles(self):
+    def getTiles(self) -> tuple[int, ...]:
         tiles = []
         for p in self._pieces:
             tiles.append(p.getTile())
         return tuple(tiles)
 
-    def getPieces(self):
+    def getPieces(self) -> list[Piece]:
         return self._pieces
     
-    def getPiece(self, tilenum):
+    def getPiece(self, tilenum: int) -> Piece | None:
         for p in self._pieces:
             if p.getTile() == tilenum:
                 return p
@@ -413,10 +414,10 @@ class Player:
 
 class CPUPlayer(Player):
 
-    def __init__(self, board, color):
+    def __init__(self, board: Board, color: str):
         Player.__init__(self, board, color)
 
-    def _genScore(self, board): # this is not important
+    def _genScore(self, board: Board) -> int: # this is not important
         score = 0
         for piece in self._pieces:
             if piece.isKing():
@@ -430,7 +431,7 @@ class CPUPlayer(Player):
                 score -= 1
         return score
 
-    def takeTurn(self, board):
+    def takeTurn(self, board: Board):
         if self._noMoves(board):
             return "loss"
         
