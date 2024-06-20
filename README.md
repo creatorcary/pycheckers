@@ -9,6 +9,8 @@ For system-wide installation: `sudo pip install pycheckers`
 
 User installation: `pip install pycheckers`
 
+You will need Tkinter, the low-level Python GUI package and dependency of graphics.py. If it's not already installed, run `sudo apt-get install python3-tk` (or the equivalent for your package manager).
+
 
 ## Usage
 1. In a Linux terminal, run the command `checkers`.
