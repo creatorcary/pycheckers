@@ -121,15 +121,11 @@ def start_server(ip="127.0.0.1", host="localhost"):
         with conn:
             print('Connected to', addr)
 
-            # Setup game
+            # Set up game
             board = Board()
 
-            while True:
-                if send_move(conn, board, is_black=True):
-                    break
-
-                if recv_move(conn, board, is_black=False):
-                    break
+            while not (send_move(conn, board, is_black=True) or recv_move(conn, board, is_black=False)):
+                pass
 
 
 def start_client(host='localhost') -> bool:
@@ -161,12 +157,8 @@ def start_client(host='localhost') -> bool:
         # Setup game
         board = Board(invert=True)
 
-        while True:
-            if recv_move(s, board, is_black=True):
-                break
-
-            if send_move(s, board, is_black=False):
-                break
+        while not (recv_move(s, board, is_black=True) or send_move(s, board, is_black=False)):
+            pass
 
     return True  # success
 
@@ -178,7 +170,7 @@ def main():
     while True:
         try:
             players = int(input("How many players? "))
-            if players in (0, 1, 2):
+            if players in range(3):
                 break
             else:
                 print("Enter either 0, 1, or 2.")
@@ -189,24 +181,21 @@ def main():
         # Multiplayer
 
         while True:
-            hj = input("Host or join (H/J)? ").upper()
-
-            if len(hj) > 0:
+            if hj := input("Host or join (H/J)? ").upper():
 
                 if hj[0] == 'H':
                     # Host
                     myIP, myname = get_local_ip()
-                    if myIP == "":
-                        print("Error fetching local IP address.")
-                    else:
+                    if myIP:
                         start_server(myIP, myname)
                         break
+                    else:
+                        print("Error fetching local IP address.")
 
                 elif hj[0] == 'J':
                     # Join
-                    host = input("Enter the host IP or hostname: ")
-                    while not start_client(host):
-                        host = input("Enter the host IP or hostname: ")
+                    while not start_client(input("Enter the host IP or hostname: ")):
+                        pass
                     break
 
                 else:

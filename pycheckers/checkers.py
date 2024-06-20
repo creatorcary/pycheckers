@@ -9,8 +9,8 @@ A single or two player checkers game, or a simulation of a checkers game
 2: player vs player
 """
 
-from random import choice
-from time import sleep
+import random
+import time
 
 from graphics import Circle, GraphWin, Point, Polygon, Rectangle
 
@@ -225,7 +225,8 @@ class Piece(Circle):
                         jumps.append(Jump(n, self._tilenum+7))  # up-left
         legalJumps = []
         for j in jumps:
-            if not self._isEdgeTile(j.jumpedTile) and not board.getTile(j.endTile).isOccupied():  # tile to jump to is unoccupied
+            if not self._isEdgeTile(j.jumpedTile) and not board.getTile(j.endTile).isOccupied():
+                # tile to jump to is unoccupied
                 legalJumps.append(j)
         return tuple(legalJumps)
 
@@ -257,7 +258,7 @@ class Piece(Circle):
             # tj is a list of Jumps
             for j in tj[:-1]:
                 self.jumpTo(board, j)
-                sleep(CPU_DELAY)
+                time.sleep(CPU_DELAY)
             return self.jumpTo(board, tj[-1])
 
     def isKing(self) -> bool:
@@ -294,13 +295,13 @@ class Player:
 
     def _canJump(self, board: Board) -> bool:
         for piece in self._pieces:
-            if len(piece.getJumps(board)) > 0:
+            if piece.getJumps(board):
                 return True
         return False
 
     def _noMoves(self, board: Board) -> bool:
         for piece in self._pieces:
-            if len(piece.getMoves(board)) > 0 or len(piece.getJumps(board)) > 0:
+            if piece.getMoves(board) or piece.getJumps(board):
                 return False
         return True
 
@@ -334,7 +335,7 @@ class Player:
 
                         # Check for double jumps
                         jumps = self._selected.getJumps(board)
-                        if not (self._selected.isKing() and not wasKing) and len(jumps) > 0:
+                        if not (self._selected.isKing() and not wasKing) and jumps:
                             doubleJump = True
                             for jump in jumps:
                                 board.getTile(jump.endTile).select()
@@ -416,51 +417,45 @@ class CPUPlayer(Player):
     def _genScore(self, board: Board) -> int:  # this is not important
         score = 0
         for piece in self._pieces:
-            if piece.isKing():
-                score += 2
-            else:
-                score += 1
+            score += 2 if piece.isKing() else 1
         for piece in board.getOpponent(self._color).getPieces():
-            if piece.isKing():
-                score -= 2
-            else:
-                score -= 1
+            score -= 2 if piece.isKing() else 1
         return score
 
     def takeTurn(self, board: Board):
         if self._noMoves(board):
             return "loss"
 
-        sleep(CPU_DELAY)
+        time.sleep(CPU_DELAY)
         if self._canJump(board):
-            jumps = []
+            jumps: list[tuple[Piece, Jump]] = []
             for piece in self._pieces:
                 for jump in piece.getJumps(board):
                     jumps.append((piece, jump))
 
-            jump = choice(jumps)
+            piece, jump = random.choice(jumps)
 
-            wasKing = jump[0].isKing()
-            board = jump[0].jumpTo(board, jump[1])
-            if not (jump[0].isKing() and not wasKing):
-                while len(jump[0].getJumps(board)) > 0:
-                    sleep(CPU_DELAY)
-                    board = jump[0].jumpTo(board, choice(jump[0].getJumps(board)))
+            wasKing = piece.isKing()
+            board = piece.jumpTo(board, jump)
+            if not (piece.isKing() and not wasKing):
+                while piece.getJumps(board):
+                    time.sleep(CPU_DELAY)
+                    board = piece.jumpTo(board, random.choice(piece.getJumps(board)))
         else:
-            moves = []
+            moves: list[tuple[Piece, int]] = []
             for piece in self._pieces:
                 for move in piece.getMoves(board):
                     moves.append((piece, move))
 
-            move = choice(moves)
+            piece, move = random.choice(moves)
 
-            board = move[0].moveTo(board, move[1])
+            board = piece.moveTo(board, move)
 
         self._genScore(board)    # BUGTEST
 
 
 if __name__ == "__main__":
     players = int(input("How many players? "))
-    b = Board(players=players)
+    b = Board(players)
     if players == 2:
         b._begin()
