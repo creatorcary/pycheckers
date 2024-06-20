@@ -1,7 +1,7 @@
 """
 checkers.py
 Logan Cary
- 
+
 A single or two player checkers game, or a simulation of a checkers game
 
 0: random simulation
@@ -22,9 +22,9 @@ CPU_DELAY = .5
 class Tile(Rectangle):
 
     def __init__(self, x: int | float, y: int | float):
-        Rectangle.__init__(self, Point(x,y), Point(x+TILE_SIZE,y-TILE_SIZE))
+        Rectangle.__init__(self, Point(x, y), Point(x+TILE_SIZE, y-TILE_SIZE))
         self.setFill("black")
-        self._location = Point(x+TILE_SIZE/2, y-TILE_SIZE/2) # center of tile
+        self._location = Point(x+TILE_SIZE/2, y-TILE_SIZE/2)  # center of tile
         self._isOccupied = False
 
     def select(self):
@@ -46,7 +46,7 @@ class Tile(Rectangle):
 class Board:
 
     def __init__(self, players=2, invert=False):
-        self._window = GraphWin("Checkers",TILE_SIZE*8,TILE_SIZE*8)
+        self._window = GraphWin("Checkers", TILE_SIZE*8, TILE_SIZE*8)
         self._window.setBackground("red")
         if invert:
             self._window.setCoords(TILE_SIZE*8, 0, 0, TILE_SIZE*8)
@@ -54,8 +54,8 @@ class Board:
         self._tiles: list[Tile] = []
         self._populate()
         self._drawTiles()
-       
-        if players == 2: 
+
+        if players == 2:
             self._blackPlayer = Player(self, "black")
             self._redPlayer = Player(self, "red")
         elif players == 1:
@@ -69,16 +69,16 @@ class Board:
                 self._redPlayer = CPUPlayer(self, "red")
                 self._begin()
                 self._reset()
-        
-                
-    def _populate(self):  
+
+    def _populate(self):
         y = TILE_SIZE * 8
-        for row in range(4):     
+        for row in range(4):
             x = 0
-            for rep in range(2): 
+            for rep in range(2):
                 for t in range(4):
-                    self._tiles.append(Tile(x,y))
-                    if len(self._tiles) < 13 or len(self._tiles) > 20: # tile starts with piece
+                    self._tiles.append(Tile(x, y))
+                    if len(self._tiles) < 13 or len(self._tiles) > 20:
+                        # tile starts with piece
                         self._tiles[-1].setOccupied()
                     x += TILE_SIZE * 2
                 y -= TILE_SIZE
@@ -133,9 +133,7 @@ class Piece(Circle):
         self.draw(board.getWindow())
 
     def _isEdgeTile(self, tilenum: int) -> bool:
-        if tilenum > 3 and tilenum < 28 and tilenum % 8 != 0 and tilenum % 8 != 7:
-            return False
-        return True
+        return not (tilenum > 3 and tilenum < 28 and tilenum % 8 != 0 and tilenum % 8 != 7)
 
     def _genCrown(self, window: GraphWin):
         p1 = Point(-TILE_SIZE/8, TILE_SIZE/10)
@@ -146,7 +144,7 @@ class Piece(Circle):
         p6 = Point(TILE_SIZE/5, -TILE_SIZE/10)
         p7 = Point(TILE_SIZE/8, TILE_SIZE/10)
 
-        points = [p1,p2,p3,p4,p5,p6,p7]
+        points = [p1, p2, p3, p4, p5, p6, p7]
         if window.trans:
             points = [Point(self._location.getX() + p.x, self._location.getY() + p.y*-1) for p in points]
         else:
@@ -172,30 +170,30 @@ class Piece(Circle):
         moves = []
         if self._isKing:
             tempmoves = []
-            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7: # edge of board
+            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7:  # edge of board
                 tempmoves = [self._tilenum-4, self._tilenum+4]
-            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0: # rows 1,3,5,7
+            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0:  # rows 1,3,5,7
                 tempmoves = [self._tilenum-4, self._tilenum-3, self._tilenum+4, self._tilenum+5]
-            else: # rows 2,4,6,8
+            else:  # rows 2,4,6,8
                 tempmoves = [self._tilenum-5, self._tilenum-4, self._tilenum+3, self._tilenum+4]
             for tm in tempmoves:
-                if tm >= 0 and tm <= 31: # tile exists
+                if tm >= 0 and tm <= 31:  # tile exists
                     moves.append(tm)
-            
+
         elif self._color == "black":
-            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7: # edge of board
+            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7:  # edge of board
                 moves = [self._tilenum+4]
-            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0: # rows 3,5,7
+            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0:  # rows 3,5,7
                 moves = [self._tilenum+4, self._tilenum+5]
-            else: # rows 2,4,6,8
+            else:  # rows 2,4,6,8
                 moves = [self._tilenum+3, self._tilenum+4]
-            
+
         else:
-            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7: # edge of board
+            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7:  # edge of board
                 moves = [self._tilenum-4]
-            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0: # rows 1,3,5,7
+            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0:  # rows 1,3,5,7
                 moves = [self._tilenum-4, self._tilenum-3]
-            else: # rows 2,4,6
+            else:  # rows 2,4,6
                 moves = [self._tilenum-5, self._tilenum-4]
 
         return tuple(moves)
@@ -208,26 +206,26 @@ class Piece(Circle):
                 moves.append(n)
         return tuple(moves)
 
-    def getJumps(self, board: Board) -> tuple['Jump', ...]: # (tile of piece to jump, empty tile to jump to)
+    def getJumps(self, board: Board) -> tuple['Jump', ...]:  # (tile of piece to jump, empty tile to jump to)
         neighbors = self._getPosMoves()
         oppTiles = board.getOpponent(self._color).getTiles()
         jumps: list[Jump] = []
         for n in neighbors:
-            if n in oppTiles: # opponent piece occupies possible move tile
+            if n in oppTiles:  # opponent piece occupies possible move tile
                 nLoc = board.getTile(n).getLocation()
                 if nLoc.getX() > self._location.getX():
                     if nLoc.getY() > self._location.getY():
-                        jumps.append(Jump(n, self._tilenum-7)) # down-right
+                        jumps.append(Jump(n, self._tilenum-7))  # down-right
                     else:
-                        jumps.append(Jump(n, self._tilenum+9)) # up-right
+                        jumps.append(Jump(n, self._tilenum+9))  # up-right
                 else:
                     if nLoc.getY() > self._location.getY():
-                        jumps.append(Jump(n, self._tilenum-9)) # down-left
+                        jumps.append(Jump(n, self._tilenum-9))  # down-left
                     else:
-                        jumps.append(Jump(n, self._tilenum+7)) # up-left                        
+                        jumps.append(Jump(n, self._tilenum+7))  # up-left
         legalJumps = []
         for j in jumps:
-            if not self._isEdgeTile(j.jumpedTile) and not board.getTile(j.endTile).isOccupied(): # tile to jump to is unoccupied
+            if not self._isEdgeTile(j.jumpedTile) and not board.getTile(j.endTile).isOccupied():  # tile to jump to is unoccupied
                 legalJumps.append(j)
         return tuple(legalJumps)
 
@@ -241,8 +239,7 @@ class Piece(Circle):
         self.move(dx, dy)
         if self._isKing:
             self._crown.move(dx, dy)
-        elif (self._color == "black" and self._tilenum > 27) or\
-           (self._color == "red" and self._tilenum < 4):
+        elif (self._color == "black" and self._tilenum > 27) or (self._color == "red" and self._tilenum < 4):
             self._isKing = True
             self._genCrown(board.getWindow())
         return board
@@ -310,20 +307,19 @@ class Player:
     def takeTurn(self, board: Board):
         if self._noMoves(board):
             return "loss"
-        
+
         moves = ()
         jumps = ()
         jumpedJumps: list[Jump] = list()
         startTile = -1
 
         while True:
-            
-            if self._selected: # piece already selected
+
+            if self._selected:  # piece already selected
                 click = board.getWindow().getMouse()
                 doubleJump = False
 
-                
-                for jump in jumps: # if valid jump clicked: jump, deselect all and pass turn 
+                for jump in jumps:  # if valid jump clicked: jump, deselect all and pass turn
                     if abs(click.getX()-board.getTile(jump.endTile).getLocation().getX()) <= TILE_SIZE/2 and\
                        abs(click.getY()-board.getTile(jump.endTile).getLocation().getY()) <= TILE_SIZE/2:
                         for tile in jumps:
@@ -342,27 +338,27 @@ class Player:
                             doubleJump = True
                             for jump in jumps:
                                 board.getTile(jump.endTile).select()
-                        
+
                         else:
                             self._selected.deselect()
                             self._selected = None
-                            
+
                             return (startTile, jumpedJumps)
-                    
-                for move in moves: # if valid move clicked: move, deselect all and pass turn
+
+                for move in moves:  # if valid move clicked: move, deselect all and pass turn
                     if abs(click.getX()-board.getTile(move).getLocation().getX()) <= TILE_SIZE/2 and\
                        abs(click.getY()-board.getTile(move).getLocation().getY()) <= TILE_SIZE/2:
                         for tile in moves:
                             board.getTile(tile).deselect()
 
-                        packet = (self._selected.getTile(), move) # encode the move for sending
+                        packet = (self._selected.getTile(), move)  # encode the move for sending
 
                         board = self._selected.moveTo(board, move)
                         self._selected.deselect()
                         self._selected = None
 
                         return packet
-                    
+
                 # else, deselect all
                 if not doubleJump:
                     for tile in jumps:
@@ -372,9 +368,9 @@ class Player:
                     self._selected.deselect()
                     self._selected = None
 
-            else: # no pieces selected
-                click = board.getWindow().getMouse()     
-                for p in self._pieces: # if player piece clicked, select all
+            else:  # no pieces selected
+                click = board.getWindow().getMouse()
+                for p in self._pieces:  # if player piece clicked, select all
                     if abs(click.getX()-p.getLocation().getX()) <= TILE_SIZE/2 and\
                        abs(click.getY()-p.getLocation().getY()) <= TILE_SIZE/2:
                         self._selected = p
@@ -404,7 +400,7 @@ class Player:
 
     def getPieces(self) -> list[Piece]:
         return self._pieces
-    
+
     def getPiece(self, tilenum: int) -> Piece | None:
         for p in self._pieces:
             if p.getTile() == tilenum:
@@ -417,7 +413,7 @@ class CPUPlayer(Player):
     def __init__(self, board: Board, color: str):
         Player.__init__(self, board, color)
 
-    def _genScore(self, board: Board) -> int: # this is not important
+    def _genScore(self, board: Board) -> int:  # this is not important
         score = 0
         for piece in self._pieces:
             if piece.isKing():
@@ -434,7 +430,7 @@ class CPUPlayer(Player):
     def takeTurn(self, board: Board):
         if self._noMoves(board):
             return "loss"
-        
+
         sleep(CPU_DELAY)
         if self._canJump(board):
             jumps = []
@@ -443,7 +439,7 @@ class CPUPlayer(Player):
                     jumps.append((piece, jump))
 
             jump = choice(jumps)
-            
+
             wasKing = jump[0].isKing()
             board = jump[0].jumpTo(board, jump[1])
             if not (jump[0].isKing() and not wasKing):
@@ -457,10 +453,10 @@ class CPUPlayer(Player):
                     moves.append((piece, move))
 
             move = choice(moves)
-            
+
             board = move[0].moveTo(board, move[1])
 
-        self._genScore(board)    #BUGTEST
+        self._genScore(board)    # BUGTEST
 
 
 if __name__ == "__main__":

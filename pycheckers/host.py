@@ -12,7 +12,7 @@ Number of players:
 
 If multiplayer is selected, the user will be asked to either host or join. If
 hosting, the user's public IP address is displayed so that the person joining
-can copy it when they select join. 
+can copy it when they select join.
 
 Globals
 -------
@@ -42,7 +42,7 @@ PORT = 22222
 def get_local_ip() -> tuple[str, str]:
     """
     Determine and return the localhost's public IP address as a string by
-    momentarily connecting to Google's DNS server. If there is an error 
+    momentarily connecting to Google's DNS server. If there is an error
     connecting, return the empty string.
     """
     hn = socket.gethostname()
@@ -53,13 +53,13 @@ def get_local_ip() -> tuple[str, str]:
         local_ip = s.getsockname()[0]
         s.close()
         return local_ip, hn
-    except:
+    except OSError:
         return "", hn
-    
+
 
 def send_move(conn: socket.socket, board: Board, is_black=True) -> bool:
     """
-    Allow a player to select a move and send it to the other player. If the 
+    Allow a player to select a move and send it to the other player. If the
     game ends as the result of the move, return True. is_black specifies which
     player is moving.
     """
@@ -74,14 +74,14 @@ def send_move(conn: socket.socket, board: Board, is_black=True) -> bool:
     if move == "loss":
         print("You lost...")
         return True
-    
+
     return False
 
 
 def recv_move(conn: socket.socket, board: Board, is_black=True) -> bool:
     """
-    Wait to receive a move from the other player, then update the board 
-    accordingly. If the game ends as the result of the move, return True. 
+    Wait to receive a move from the other player, then update the board
+    accordingly. If the game ends as the result of the move, return True.
     is_black specifies which player is moving.
     """
     # Wait for a move from the client
@@ -96,7 +96,7 @@ def recv_move(conn: socket.socket, board: Board, is_black=True) -> bool:
             piece.doMove(board, move)
         else:
             raise Exception("Received an invalid move from the opponent.")
-        
+
         return False
     except ValueError:
         print("You won!")
@@ -107,9 +107,9 @@ def start_server(ip="127.0.0.1", host="localhost"):
     """
     Host a checkers game as the given IP address or hostname.
 
-    Accept the first request to connect. The host plays as black and goes 
+    Accept the first request to connect. The host plays as black and goes
     first. Alternate sending moves back and forth over the network connection
-    until someone wins the game. Then terminate the connection. 
+    until someone wins the game. Then terminate the connection.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((ip, PORT))
@@ -137,9 +137,9 @@ def start_client(host='localhost') -> bool:
     Join the checkers game hosted at the given IP address or hostname.
 
     A bad request to connect will timeout after 10 seconds. The joiner plays as
-    red and goes second. Alternate sending moves back and forth over the 
-    network connection until someone wins the game. Then terminate the 
-    connection. 
+    red and goes second. Alternate sending moves back and forth over the
+    network connection until someone wins the game. Then terminate the
+    connection.
     """
     print("Joining", host, "...")
 
@@ -156,19 +156,19 @@ def start_client(host='localhost') -> bool:
         except ConnectionRefusedError:
             print("Connection refused.")
             return False
-        s.settimeout(None) # Allow moves to take any length of time
+        s.settimeout(None)  # Allow moves to take any length of time
 
         # Setup game
         board = Board(invert=True)
 
         while True:
-            if recv_move(s, board, is_black=True): 
+            if recv_move(s, board, is_black=True):
                 break
 
             if send_move(s, board, is_black=False):
                 break
-    
-    return True # success
+
+    return True  # success
 
 
 def main():
@@ -178,7 +178,7 @@ def main():
     while True:
         try:
             players = int(input("How many players? "))
-            if players in (0,1,2):
+            if players in (0, 1, 2):
                 break
             else:
                 print("Enter either 0, 1, or 2.")
@@ -190,7 +190,7 @@ def main():
 
         while True:
             hj = input("Host or join (H/J)? ").upper()
-            
+
             if len(hj) > 0:
 
                 if hj[0] == 'H':
