@@ -19,6 +19,9 @@ from graphics import Circle, GraphWin, Point, Polygon, Rectangle
 
 TILE_SIZE = 80
 """Length of each square game tile in pixels."""
+BOARD_SIZE = 8
+"""Length of the board in tiles. Must be an even number >=4 or things will break."""
+HALF_BOARD_SIZE = BOARD_SIZE // 2
 CPU_DELAY = 0.5
 """Number of seconds to wait between double jumps and CPU-player moves."""
 
@@ -60,10 +63,10 @@ class Board:
         :param invert: Black player on top. If left as `False`, black player is at the bottom of the window.
 
         """
-        self._window = GraphWin("Checkers", TILE_SIZE * 8, TILE_SIZE * 8)
+        self._window = GraphWin("Checkers", TILE_SIZE * BOARD_SIZE, TILE_SIZE * BOARD_SIZE)
         self._window.setBackground("red")
         if invert:
-            self._window.setCoords(TILE_SIZE * 8, 0, 0, TILE_SIZE * 8)
+            self._window.setCoords(TILE_SIZE * BOARD_SIZE, 0, 0, TILE_SIZE * BOARD_SIZE)
         self._populate()
         self._drawTiles()
 
@@ -86,14 +89,30 @@ class Board:
                 raise ValueError("Specify either 0, 1, or 2 players")
 
     def _populate(self):
+        """
+        Tile indices are arranged as so:
+        |  |  |  |  |  |  |  |  |
+        |--|--|--|--|--|--|--|--|
+        |  |28|  |29|  |30|  |31|
+        |24|  |25|  |26|  |27|  |
+        |  |20|  |21|  |22|  |23|
+        |16|  |17|  |18|  |19|  |
+        |  |12|  |13|  |14|  |15|
+        | 8|  | 9|  |10|  |11|  |
+        |  | 4|  | 5|  | 6|  | 7|
+        | 0|  | 1|  | 2|  | 3|  |
+        """
         self._tiles: list[Tile] = []
-        y = TILE_SIZE * 8
-        for row in range(4):
+        y = TILE_SIZE * BOARD_SIZE
+        for row in range(HALF_BOARD_SIZE):
             x = 0
-            for rep in range(2):
-                for t in range(4):
+            for rep in range(2):  # two rows at a time
+                for t in range(HALF_BOARD_SIZE):
                     self._tiles.append(Tile(x, y))
-                    if len(self._tiles) < 13 or len(self._tiles) > 20:
+                    if (
+                        len(self._tiles) <= HALF_BOARD_SIZE * (HALF_BOARD_SIZE - 1)
+                        or len(self._tiles) > HALF_BOARD_SIZE * (HALF_BOARD_SIZE + 1)
+                    ):
                         # tile starts with piece
                         self._tiles[-1].setOccupied()
                     x += TILE_SIZE * 2
@@ -127,7 +146,11 @@ class Board:
         return self._window
 
     def getTile(self, tilenum: int) -> Tile:
-        return self._tiles[tilenum]
+        try:
+            return self._tiles[tilenum]
+        except:
+            print(len(self._tiles), tilenum)
+            raise
 
     def getOpponent(self, color: PlayerColor) -> 'Player | CPUPlayer':
         if color == PlayerColor.BLACK:
@@ -142,13 +165,18 @@ class Piece(Circle):
         self._tilenum = tilenum
         self._isKing = False
         self._location = board.getTile(tilenum).getLocation()
-        Circle.__init__(self, self._location, TILE_SIZE/5*2)
+        Circle.__init__(self, self._location, TILE_SIZE / 5 * 2)
         self.setFill(color)
         self.setOutline("white")
         self.draw(board.getWindow())
 
     def _isEdgeTile(self, tilenum: int) -> bool:
-        return not (tilenum > 3 and tilenum < 28 and tilenum % 8 != 0 and tilenum % 8 != 7)
+        return not (
+            tilenum > HALF_BOARD_SIZE - 1  # bottom row
+            and tilenum < (BOARD_SIZE - 1) * HALF_BOARD_SIZE  # top row
+            and tilenum % BOARD_SIZE != 0  # left column
+            and tilenum % BOARD_SIZE != BOARD_SIZE - 1  # right column
+        )
 
     def _genCrown(self, window: GraphWin):
         points = [
@@ -184,39 +212,49 @@ class Piece(Circle):
 
     def _getPosMoves(self) -> tuple[int, ...]:
         if self._isKing:
-            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7:
+            if self._tilenum % BOARD_SIZE == 0 or self._tilenum % BOARD_SIZE == BOARD_SIZE - 1:
                 # edge of board
-                tempmoves = [self._tilenum - 4, self._tilenum + 4]
+                tempmoves = [self._tilenum - HALF_BOARD_SIZE, self._tilenum + HALF_BOARD_SIZE]
             elif (self.getLocation().getY() / TILE_SIZE - 0.5) % 2 == 0:
-                # rows 1,3,5,7
-                tempmoves = [self._tilenum - 4, self._tilenum - 3, self._tilenum + 4, self._tilenum + 5]
+                # rows 1,3,5,7 (odd numbered rows)
+                tempmoves = [
+                    self._tilenum - HALF_BOARD_SIZE,
+                    self._tilenum - HALF_BOARD_SIZE + 1,
+                    self._tilenum + HALF_BOARD_SIZE,
+                    self._tilenum + HALF_BOARD_SIZE + 1,
+                ]
             else:
-                # rows 2,4,6,8
-                tempmoves = [self._tilenum - 5, self._tilenum - 4, self._tilenum + 3, self._tilenum + 4]
+                # rows 2,4,6,8 (even numbered rows)
+                tempmoves = [
+                    self._tilenum - HALF_BOARD_SIZE - 1,
+                    self._tilenum - HALF_BOARD_SIZE,
+                    self._tilenum + HALF_BOARD_SIZE - 1,
+                    self._tilenum + HALF_BOARD_SIZE,
+                ]
             # filter for tiles that exist
-            moves = [tm for tm in tempmoves if tm >= 0 and tm <= 31]
+            moves = [tm for tm in tempmoves if tm >= 0 and tm < BOARD_SIZE * HALF_BOARD_SIZE]
 
         elif self._color == PlayerColor.BLACK:
-            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7:
+            if self._tilenum % BOARD_SIZE == 0 or self._tilenum % BOARD_SIZE == BOARD_SIZE - 1:
                 # edge of board
-                moves = [self._tilenum+4]
-            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0:
+                moves = [self._tilenum + HALF_BOARD_SIZE]
+            elif (self.getLocation().getY() / TILE_SIZE - 0.5) % 2 == 0:
                 # rows 3,5,7
-                moves = [self._tilenum+4, self._tilenum+5]
+                moves = [self._tilenum + HALF_BOARD_SIZE, self._tilenum + HALF_BOARD_SIZE + 1]
             else:
                 # rows 2,4,6,8
-                moves = [self._tilenum+3, self._tilenum+4]
+                moves = [self._tilenum + HALF_BOARD_SIZE - 1, self._tilenum + HALF_BOARD_SIZE]
 
         else:
-            if self._tilenum % 8 == 0 or self._tilenum % 8 == 7:
+            if self._tilenum % BOARD_SIZE == 0 or self._tilenum % BOARD_SIZE == BOARD_SIZE - 1:
                 # edge of board
-                moves = [self._tilenum-4]
-            elif (self.getLocation().getY()/TILE_SIZE-.5) % 2 == 0:
+                moves = [self._tilenum - HALF_BOARD_SIZE]
+            elif (self.getLocation().getY() / TILE_SIZE - 0.5) % 2 == 0:
                 # rows 1,3,5,7
-                moves = [self._tilenum-4, self._tilenum-3]
+                moves = [self._tilenum - HALF_BOARD_SIZE, self._tilenum - HALF_BOARD_SIZE + 1]
             else:
                 # rows 2,4,6
-                moves = [self._tilenum-5, self._tilenum-4]
+                moves = [self._tilenum - HALF_BOARD_SIZE - 1, self._tilenum - HALF_BOARD_SIZE]
 
         return tuple(moves)
 
@@ -233,14 +271,14 @@ class Piece(Circle):
                 nLoc = board.getTile(n).getLocation()
                 if nLoc.getX() > self._location.getX():
                     if nLoc.getY() > self._location.getY():
-                        jumps.append(Jump(n, self._tilenum-7))  # down-right
+                        jumps.append(Jump(n, self._tilenum - BOARD_SIZE + 1))  # down-right
                     else:
-                        jumps.append(Jump(n, self._tilenum+9))  # up-right
+                        jumps.append(Jump(n, self._tilenum + BOARD_SIZE + 1))  # up-right
                 else:
                     if nLoc.getY() > self._location.getY():
-                        jumps.append(Jump(n, self._tilenum-9))  # down-left
+                        jumps.append(Jump(n, self._tilenum - BOARD_SIZE - 1))  # down-left
                     else:
-                        jumps.append(Jump(n, self._tilenum+7))  # up-left
+                        jumps.append(Jump(n, self._tilenum + BOARD_SIZE - 1))  # up-left
         return tuple(filter(
             lambda j: not self._isEdgeTile(j.jumpedTile) and not board.getTile(j.endTile).isOccupied(),
             jumps
@@ -257,8 +295,8 @@ class Piece(Circle):
         if self._isKing:
             self._crown.move(dx, dy)
         elif (
-            (self._color == PlayerColor.BLACK and self._tilenum > 27)
-            or (self._color == PlayerColor.RED and self._tilenum < 4)
+            (self._color == PlayerColor.BLACK and self._tilenum >= HALF_BOARD_SIZE * (BOARD_SIZE - 1))
+            or (self._color == PlayerColor.RED and self._tilenum < HALF_BOARD_SIZE)
         ):
             self._isKing = True
             self._genCrown(board.getWindow())
@@ -305,8 +343,11 @@ class Player:
         self._selected: Piece | None = None
 
     def _populate(self, board: Board):
-        startTile = 0 if self._color == PlayerColor.BLACK else 20
-        self._pieces = [Piece(board, self._color, tile) for tile in range(startTile, startTile + 12)]
+        startTile = 0 if self._color == PlayerColor.BLACK else HALF_BOARD_SIZE * (HALF_BOARD_SIZE + 1)
+        self._pieces = [
+            Piece(board, self._color, tile)
+            for tile in range(startTile, startTile + HALF_BOARD_SIZE * (HALF_BOARD_SIZE - 1))
+        ]
 
     def _canJump(self, board: Board) -> bool:
         return any(piece.getJumps(board) for piece in self._pieces)
