@@ -7,8 +7,8 @@ A single or two player checkers game, or a simulation of a checkers game
 0: random simulation
 1: player vs random AI
 2: player vs player
-
 """
+import dataclasses
 import enum
 import random
 import time
@@ -22,6 +22,7 @@ TILE_SIZE = 80
 BOARD_SIZE = 8
 """Length of the board in tiles. Must be an even number >=4 or things will break."""
 HALF_BOARD_SIZE = BOARD_SIZE // 2
+"""Half of `BOARD_SIZE`. Also how many playable tiles fit in one row."""
 CPU_DELAY = 0.5
 """Number of seconds to wait between double jumps and CPU-player moves."""
 
@@ -32,8 +33,13 @@ class PlayerColor(enum.StrEnum):
 
 
 class Tile(Rectangle):
+    """A single black tile on the board that pieces can play on."""
 
     def __init__(self, x: int | float, y: int | float):
+        """
+        :param x: x-coordinate of the tile's bottom-left corner.
+        :param y: y-coordinate of the tile's bottom-left corner.
+        """
         Rectangle.__init__(self, Point(x, y), Point(x + TILE_SIZE, y - TILE_SIZE))
         self.setFill("black")
         self._location = Point(x + TILE_SIZE / 2, y - TILE_SIZE / 2)  # center of tile
@@ -52,6 +58,7 @@ class Tile(Rectangle):
         self._isOccupied = tf
 
     def getLocation(self) -> Point:
+        """Coordinates for the center of this tile (where a piece would be drawn)."""
         return self._location
 
 
@@ -61,7 +68,6 @@ class Board:
         """
         :param players: 0 for simulated games, 1 for singleplayer, 2 for multiplayer.
         :param invert: Black player on top. If left as `False`, black player is at the bottom of the window.
-
         """
         self._window = GraphWin("Checkers", TILE_SIZE * BOARD_SIZE, TILE_SIZE * BOARD_SIZE)
         self._window.setBackground("red")
@@ -93,10 +99,11 @@ class Board:
                 raise ValueError("Specify either 0, 1, or 2 players")
 
     def _populate(self):
-        """
-        Tile indices are arranged as so:
+        """Reset and populate the tiles list.
+
+        Tile indices are arranged like so:
         |  |  |  |  |  |  |  |  |
-        |--|--|--|--|--|--|--|--|
+        |-:|-:|-:|-:|-:|-:|-:|-:|
         |  |28|  |29|  |30|  |31|
         |24|  |25|  |26|  |27|  |
         |  |20|  |21|  |22|  |23|
@@ -124,11 +131,15 @@ class Board:
                 x = TILE_SIZE
 
     def _drawTiles(self):
+        """Draw all tiles in the tiles list to the window."""
         for tile in self._tiles:
             tile.draw(self._window)
 
     def _begin(self) -> PlayerColor:
-        """Return the winner."""
+        """Play a single game, alternating turns between players.
+
+        :return: The winner.
+        """
         turnColor = PlayerColor.BLACK
         status = ""
         while status != "loss":
@@ -141,6 +152,7 @@ class Board:
         return turnColor
 
     def _reset(self):
+        """Reset the tiles list and undraw all pieces."""
         self._populate()
         for piece in self._blackPlayer.getPieces():
             piece.undraw()
@@ -151,9 +163,13 @@ class Board:
         return self._window
 
     def getTile(self, tilenum: int) -> Tile:
+        """
+        :param tilenum: Index of the tile in the tiles list.
+        """
         return self._tiles[tilenum]
 
     def getOpponent(self, color: PlayerColor) -> 'Player | CPUPlayer':
+        """Get the player object that opposes the given color."""
         if color == PlayerColor.BLACK:
             return self._redPlayer
         return self._blackPlayer
@@ -162,6 +178,11 @@ class Board:
 class Piece(Circle):
 
     def __init__(self, board: Board, color: PlayerColor, tilenum: int):
+        """
+        :param board:
+        :param color: Player color that this piece belongs to.
+        :param tilenum: Index of the tile that this piece should start on.
+        """
         self._color = color
         self._tilenum = tilenum
         self._isKing = False
@@ -172,6 +193,7 @@ class Piece(Circle):
         self.draw(board.getWindow())
 
     def _isEdgeTile(self, tilenum: int) -> bool:
+        """Utility function to determine if a tile is on the edge of the board."""
         return not (
             tilenum > HALF_BOARD_SIZE - 1  # bottom row
             and tilenum < (BOARD_SIZE - 1) * HALF_BOARD_SIZE  # top row
@@ -180,6 +202,7 @@ class Piece(Circle):
         )
 
     def _genCrown(self, window: GraphWin):
+        """Draw a gold crown on this piece."""
         points = [
             Point(-TILE_SIZE / 8, TILE_SIZE / 10),
             Point(-TILE_SIZE / 5, -TILE_SIZE / 10),
@@ -211,10 +234,13 @@ class Piece(Circle):
     def deselect(self):
         self.setOutline("white")
 
-    def _getPosMoves(self) -> tuple[int, ...]:
+    def _getPosMoves(self) -> list[int]:
+        """
+        :return: List of tile numbers representing the tiles that this piece can move to if they are unoccupied.
+        """
         if self._isKing:
             if self._tilenum % BOARD_SIZE == 0 or self._tilenum % BOARD_SIZE == BOARD_SIZE - 1:
-                # edge of board
+                # left or right edge of the board
                 tempmoves = [self._tilenum - HALF_BOARD_SIZE, self._tilenum + HALF_BOARD_SIZE]
             elif (self.getLocation().getY() / TILE_SIZE - 0.5) % 2 == 0:
                 # rows 1,3,5,7 (odd numbered rows)
@@ -233,7 +259,7 @@ class Piece(Circle):
                     self._tilenum + HALF_BOARD_SIZE,
                 ]
             # filter for tiles that exist
-            moves = [tm for tm in tempmoves if tm >= 0 and tm < BOARD_SIZE * HALF_BOARD_SIZE]
+            moves = list(filter(lambda tm: tm >= 0 and tm < BOARD_SIZE * HALF_BOARD_SIZE, tempmoves))
 
         elif self._color == PlayerColor.BLACK:
             if self._tilenum % BOARD_SIZE == 0 or self._tilenum % BOARD_SIZE == BOARD_SIZE - 1:
@@ -257,35 +283,46 @@ class Piece(Circle):
                 # rows 2,4,6
                 moves = [self._tilenum - HALF_BOARD_SIZE - 1, self._tilenum - HALF_BOARD_SIZE]
 
-        return tuple(moves)
+        return moves
 
-    def getMoves(self, board: Board) -> tuple[int, ...]:
+    def getMoves(self, board: Board) -> list[int]:
+        """
+        :return: List of tile numbers representing the tiles that this piece can move to.
+        """
         neighbors = self._getPosMoves()
-        return tuple(filter(lambda n: not board.getTile(n).isOccupied(), neighbors))
+        return list(filter(lambda n: not board.getTile(n).isOccupied(), neighbors))
 
     def getJumps(self, board: Board) -> tuple['Jump', ...]:  # (tile of piece to jump, empty tile to jump to)
+        """
+        :return: Jumps that this piece can make.
+        """
         neighbors = self._getPosMoves()
         oppTiles = board.getOpponent(self._color).getTiles()
         jumps: list[Jump] = []
-        for n in neighbors:
-            if n in oppTiles:  # opponent piece occupies possible move tile
-                nLoc = board.getTile(n).getLocation()
-                if nLoc.getX() > self._location.getX():
-                    if nLoc.getY() > self._location.getY():
-                        jumps.append(Jump(n, self._tilenum - BOARD_SIZE + 1))  # down-right
-                    else:
-                        jumps.append(Jump(n, self._tilenum + BOARD_SIZE + 1))  # up-right
+        for n in filter(lambda n: n in oppTiles, neighbors):
+            # opponent piece occupies possible move tile
+            nLoc = board.getTile(n).getLocation()
+            if nLoc.getX() > self._location.getX():
+                if nLoc.getY() > self._location.getY():
+                    jumps.append(Jump(n, self._tilenum - BOARD_SIZE + 1))  # down-right
                 else:
-                    if nLoc.getY() > self._location.getY():
-                        jumps.append(Jump(n, self._tilenum - BOARD_SIZE - 1))  # down-left
-                    else:
-                        jumps.append(Jump(n, self._tilenum + BOARD_SIZE - 1))  # up-left
+                    jumps.append(Jump(n, self._tilenum + BOARD_SIZE + 1))  # up-right
+            else:
+                if nLoc.getY() > self._location.getY():
+                    jumps.append(Jump(n, self._tilenum - BOARD_SIZE - 1))  # down-left
+                else:
+                    jumps.append(Jump(n, self._tilenum + BOARD_SIZE - 1))  # up-left
         return tuple(filter(
             lambda j: not self._isEdgeTile(j.jumpedTile) and not board.getTile(j.endTile).isOccupied(),
             jumps
         ))
 
     def moveTo(self, board: Board, tile: int) -> Board:
+        """Redraw this piece on another tile and update the board state accordingly.
+    
+        :param board:
+        :param tile: Index of the tile to move to.
+        """
         dx = board.getTile(tile).getLocation().getX() - self._location.getX()
         dy = board.getTile(tile).getLocation().getY() - self._location.getY()
         board.getTile(self._tilenum).setOccupied(False)
@@ -304,12 +341,23 @@ class Piece(Circle):
         return board
 
     def jumpTo(self, board: Board, jump: 'Jump') -> Board:
+        """Complete a jump by moving this piece, eliminating the jumped
+        piece, and updating the board state accordingly.
+
+        :param board:
+        :param jump:
+        """
         board = self.moveTo(board, jump.endTile)
         board.getOpponent(self._color).killPiece(jump.jumpedTile)
         board.getTile(jump.jumpedTile).setOccupied(False)
         return board
 
     def doMove(self, board: Board, tj: int | list['Jump']) -> Board:
+        """Generalized method for completing a move.
+
+        :param board:
+        :param tj: Index of the tile to move to or a list of consecutive jumps to make.
+        """
         if isinstance(tj, int):
             return self.moveTo(board, tj)
 
@@ -323,17 +371,20 @@ class Piece(Circle):
         return self._isKing
 
     def getTile(self) -> int:
+        """Index of the tile that this piece currently occupies."""
         return self._tilenum
 
     def getLocation(self) -> Point:
+        """Coordinates for the center of this piece. Same as the location of the tile that this piece occupies."""
         return self._location
 
 
+@dataclasses.dataclass
 class Jump:
-
-    def __init__(self, jumpedTile: int, endTile: int):
-        self.jumpedTile = jumpedTile
-        self.endTile = endTile
+    jumpedTile: int
+    """Index of the tile that is to be "jumped" over."""
+    endTile: int
+    """Index of the tile that the jumping piece will subsequently land on."""
 
 
 class Player:
@@ -344,6 +395,7 @@ class Player:
         self._selected: Piece | None = None
 
     def _populate(self, board: Board):
+        """Reset and populate the list of pieces this player controls."""
         startTile = 0 if self._color == PlayerColor.BLACK else HALF_BOARD_SIZE * (HALF_BOARD_SIZE + 1)
         self._pieces = [
             Piece(board, self._color, tile)
@@ -351,12 +403,32 @@ class Player:
         ]
 
     def _canJump(self, board: Board) -> bool:
+        """
+        :return: Any piece owned by this player can perform a jump.
+        """
         return any(piece.getJumps(board) for piece in self._pieces)
 
     def _noMoves(self, board: Board) -> bool:
+        """
+        :return: No piece owned by this player can move or jump. Indicates a loss.
+        """
         return not any(piece.getMoves(board) or piece.getJumps(board) for piece in self._pieces)
 
     def takeTurn(self, board: Board) -> typing.Literal["loss"] | tuple[int, list[Jump]] | tuple[int, int]:
+        """Use mouse input to complete a turn.
+
+        A clicked piece will be highlighted along with its available moves. Clicking on one of its available moves will
+        trigger the move. Multijumps require consecutive move selection. If any piece can perform a jump this turn, the
+        player will be forced to select a jump.
+
+        :return:
+            * If no moves are available at the start of the turn, `"loss"` is returned.
+
+            * If a jump is chosen, the first return is the initial tile index of the piece that is jumping. The second
+              return is the list of consecutive jump(s) made.
+
+            * If a move is chosen, the pair of numbers returned is the start tile and end tile of the moving piece.
+        """
         if self._noMoves(board):
             return "loss"
 
@@ -447,22 +519,28 @@ class Player:
                         break
 
     def killPiece(self, tilenum: int):
-        for piece in self._pieces:
-            if piece.getTile() == tilenum:
-                self._pieces.remove(piece)
-                piece.undraw()
-                break
+        """Eliminate this player's piece at the given tile index from the game."""
+        for piece in filter(lambda piece: piece.getTile() == tilenum, self._pieces):
+            self._pieces.remove(piece)
+            piece.undraw()
+            break
 
-    def getTiles(self) -> list[int]:
-        return [p.getTile() for p in self._pieces]
+    def getTiles(self) -> set[int]:
+        """
+        :return: Set of all tile indices that this player's pieces occupy.
+        """
+        return {p.getTile() for p in self._pieces}
 
     def getPieces(self) -> list[Piece]:
+        """
+        :return: List of this player's pieces.
+        """
         return self._pieces
 
     def getPiece(self, tilenum: int) -> Piece | None:
-        for p in self._pieces:
-            if p.getTile() == tilenum:
-                return p
+        """Retrieve the `Piece` object of this player's piece at the given tile index."""
+        for p in filter(lambda p: p.getTile() == tilenum, self._pieces):
+            return p
 
 
 class CPUPlayer(Player):
@@ -472,7 +550,6 @@ class CPUPlayer(Player):
 
         Return the difference between this player's score and the opponent's score where each remaining pawn scores
         one point and each remaining king scores two points. 
-
         """
         my_score = sum(2 if piece.isKing() else 1 for piece in self._pieces)
         op_score = sum(2 if piece.isKing() else 1 for piece in board.getOpponent(self._color).getPieces())
@@ -482,7 +559,6 @@ class CPUPlayer(Player):
         """Make a random legal move.
 
         :return: `"loss"` if unable to make a move.
-
         """
         if self._noMoves(board):
             return "loss"
