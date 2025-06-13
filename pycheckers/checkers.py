@@ -173,11 +173,11 @@ class Board:
     @staticmethod
     def isEdgeTile(tilenum: int) -> bool:
         """Utility function to determine if a tile is on the edge of the board."""
-        return not (
-            tilenum > HALF_BOARD_SIZE - 1  # bottom row
-            and tilenum < (BOARD_SIZE - 1) * HALF_BOARD_SIZE  # top row
-            and tilenum % BOARD_SIZE != 0  # left column
-            and tilenum % BOARD_SIZE != BOARD_SIZE - 1  # right column
+        return (
+            tilenum < HALF_BOARD_SIZE  # bottom row
+            or tilenum >= (BOARD_SIZE - 1) * HALF_BOARD_SIZE  # top row
+            or tilenum % BOARD_SIZE == 0  # left column
+            or tilenum % BOARD_SIZE == BOARD_SIZE - 1  # right column
         )
 
     def getOpponent(self, color: PlayerColor) -> 'Player | CPUPlayer':
