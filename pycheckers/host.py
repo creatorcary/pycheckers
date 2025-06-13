@@ -49,7 +49,7 @@ def get_local_ip() -> tuple[str, str]:
     try:
         # Create a socket and connect to an external service (e.g., Google's DNS server)
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8', 80))
+        s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
         s.close()
         return local_ip, hn
@@ -114,12 +114,12 @@ def start_server(ip="127.0.0.1", host="localhost"):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((ip, PORT))
         s.listen(1)
-        print("Your IP address is", ip, "("+host+")")
+        print(f"Your IP address is {ip} ({host})")
         print("Waiting for someone to join...")
         conn, addr = s.accept()
 
         with conn:
-            print('Connected to', addr)
+            print("Connected to", addr)
 
             # Set up game
             board = Board()
@@ -128,7 +128,7 @@ def start_server(ip="127.0.0.1", host="localhost"):
                 pass
 
 
-def start_client(host='localhost') -> bool:
+def start_client(host="localhost") -> bool:
     """
     Join the checkers game hosted at the given IP address or hostname.
 
@@ -137,7 +137,7 @@ def start_client(host='localhost') -> bool:
     network connection until someone wins the game. Then terminate the
     connection.
     """
-    print("Joining", host, "...")
+    print(f"Joining {host}...")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(10)
@@ -183,7 +183,7 @@ def main():
         while True:
             if hj := input("Host or join (H/J)? ").upper():
 
-                if hj[0] == 'H':
+                if hj[0] == "H":
                     # Host
                     myIP, myname = get_local_ip()
                     if myIP:
@@ -192,7 +192,7 @@ def main():
                     else:
                         print("Error fetching local IP address.")
 
-                elif hj[0] == 'J':
+                elif hj[0] == "J":
                     # Join
                     while not start_client(input("Enter the host IP or hostname: ")):
                         pass
