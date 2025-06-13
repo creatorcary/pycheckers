@@ -77,14 +77,18 @@ class Board:
             case 1:
                 self._blackPlayer = Player(self, PlayerColor.BLACK)
                 self._redPlayer = CPUPlayer(self, PlayerColor.RED)
-                self._begin()
+                winner = self._begin()
+                print(winner.capitalize(), "player won.")
             case 0:
                 sims = int(input("How many simulations? "))
+                wins = {PlayerColor.BLACK: 0, PlayerColor.RED: 0}
                 for _ in range(sims):
                     self._blackPlayer = CPUPlayer(self, PlayerColor.BLACK)
                     self._redPlayer = CPUPlayer(self, PlayerColor.RED)
-                    self._begin()
+                    winner = self._begin()
+                    wins[winner] += 1
                     self._reset()
+                print("Wins:", wins)
             case _:
                 raise ValueError("Specify either 0, 1, or 2 players")
 
@@ -123,7 +127,8 @@ class Board:
         for tile in self._tiles:
             tile.draw(self._window)
 
-    def _begin(self):
+    def _begin(self) -> PlayerColor:
+        """Return the winner."""
         turnColor = PlayerColor.BLACK
         status = ""
         while status != "loss":
@@ -133,7 +138,7 @@ class Board:
             else:
                 status = self._redPlayer.takeTurn(self)
                 turnColor = PlayerColor.BLACK
-        print(turnColor.capitalize(), "player won.")
+        return turnColor
 
     def _reset(self):
         self._populate()
@@ -146,11 +151,7 @@ class Board:
         return self._window
 
     def getTile(self, tilenum: int) -> Tile:
-        try:
-            return self._tiles[tilenum]
-        except:
-            print(len(self._tiles), tilenum)
-            raise
+        return self._tiles[tilenum]
 
     def getOpponent(self, color: PlayerColor) -> 'Player | CPUPlayer':
         if color == PlayerColor.BLACK:
@@ -509,4 +510,5 @@ if __name__ == "__main__":
     players = int(input("How many players? "))
     b = Board(players)
     if players == 2:
-        b._begin()
+        winner = b._begin()
+        print(winner.capitalize(), "player won.")
