@@ -162,38 +162,47 @@ def main():
         except ValueError:
             print("Enter either 0, 1, or 2.")
 
-    if players == 2:
-        # Multiplayer
+    match players:
+        case 2:
+            # Multiplayer
+            while True:
+                if hj := input("Host or join (H/J)? ").upper():
 
-        while True:
-            if hj := input("Host or join (H/J)? ").upper():
+                    if hj[0] == "H":
+                        # Host
+                        my_ip, my_name = get_local_ip()
+                        if my_ip:
+                            start_server(my_ip, my_name)
+                            break
+                        else:
+                            print("Error fetching local IP address.")
 
-                if hj[0] == "H":
-                    # Host
-                    my_ip, my_name = get_local_ip()
-                    if my_ip:
-                        start_server(my_ip, my_name)
+                    elif hj[0] == "J":
+                        # Join
+                        while not start_client(input("Enter the host IP or hostname: ")):
+                            pass
                         break
-                    else:
-                        print("Error fetching local IP address.")
 
-                elif hj[0] == "J":
-                    # Join
-                    while not start_client(input("Enter the host IP or hostname: ")):
-                        pass
-                    break
+                    else:
+                        # Invalid option
+                        print("Invalid option.")
 
                 else:
-                    # Invalid option
-                    print("Invalid option.")
-
+                    # Nothing entered
+                    print("Enter an option.")
+        case 1:
+            board = Board(players)
+            winner = board.play_one()
+            print(f"{winner.capitalize()} player won.")
+        case 0:
+            games = int(input("How many sims? "))
+            board = Board(players)
+            if games > 1:
+                counts = board.play(games)
+                print(counts)
             else:
-                # Nothing entered
-                print("Enter an option.")
-
-    else:
-        # Single player or sim
-        Board(players)
+                winner = board.play_one()
+                print(f"{winner.capitalize()} player won.")
 
 
 if __name__ == "__main__":

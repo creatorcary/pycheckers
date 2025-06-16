@@ -87,18 +87,9 @@ class Board:
             case 1:
                 self._black_player = Player(self, PlayerColor.BLACK)
                 self._red_player = CPUPlayer(self, PlayerColor.RED)
-                winner = self._begin()
-                print(winner.capitalize(), "player won.")
             case 0:
-                sims = int(input("How many simulations? "))
-                wins = {PlayerColor.BLACK: 0, PlayerColor.RED: 0}
-                for _ in range(sims):
-                    self._black_player = CPUPlayer(self, PlayerColor.BLACK)
-                    self._red_player = CPUPlayer(self, PlayerColor.RED)
-                    winner = self._begin()
-                    wins[winner] += 1
-                    self._reset()
-                print("Wins:", wins)
+                self._black_player = CPUPlayer(self, PlayerColor.BLACK)
+                self._red_player = CPUPlayer(self, PlayerColor.RED)
             case _:
                 raise ValueError("Specify either 0, 1, or 2 players")
 
@@ -138,12 +129,9 @@ class Board:
         """Draw all tiles in the tiles list to the window."""
         for tile in self._tiles:
             tile.draw(self._window)
-
-    def _begin(self) -> PlayerColor:
-        """Play a single game, alternating turns between players.
-
-        :return: The winner.
-        """
+    
+    def play_one(self) -> PlayerColor:
+        """Alias of `play(n=1)`."""
         turn_color = PlayerColor.BLACK
         status = ""
         while status != "loss":
@@ -153,15 +141,36 @@ class Board:
             else:
                 status = self._red_player.take_turn()
                 turn_color = PlayerColor.BLACK
+        self._reset()
         return turn_color
+
+    @typing.overload
+    def play(self, n: typing.Literal[1] = 1) -> PlayerColor: ...
+    @typing.overload
+    def play(self, n: int) -> dict[PlayerColor, int]: ...
+
+    def play(self, n: int = 1) -> PlayerColor | dict[PlayerColor, int]:
+        """Play `n` games, alternating turns between players.
+
+        :return: Win counts.
+        """
+        if n == 1:
+            return self.play_one()
+
+        wins = {PlayerColor.BLACK: 0, PlayerColor.RED: 0}
+        for _ in range(n):
+            winner = self.play_one()
+            wins[winner] += 1
+
+        return wins
 
     def _reset(self):
         """Reset the tiles list and undraw all pieces."""
+        for piece in self._black_player.pieces + self._red_player.pieces:
+            piece.undraw()
         self._populate()
-        for piece in self._black_player.pieces:
-            piece.undraw()
-        for piece in self._red_player.pieces:
-            piece.undraw()
+        self._black_player._populate()
+        self._red_player._populate()
 
     @property
     def window(self) -> GraphWin:
@@ -608,7 +617,10 @@ class CPUPlayer(Player):
 
 if __name__ == "__main__":
     players = int(input("How many players? "))
-    b = Board(players)
-    if players == 2:
-        winner = b._begin()
-        print(winner.capitalize(), "player won.")
+    board = Board(players)
+    if players == 0:
+        games = int(input("How many sims? "))
+        counts = board.play(games)
+        print(counts)
+    else:
+        board.play_one()
