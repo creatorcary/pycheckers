@@ -13,26 +13,11 @@ Number of players:
 If multiplayer is selected, the user will be asked to either host or join. If
 hosting, the user's public IP address is displayed so that the person joining
 can copy it when they select join.
-
-Globals
--------
-PORT
-
-Functions
----------
-get_local_ip()
-send_move()
-recv_move()
-start_server()
-start_client()
-main()
-
 """
-
 import pickle
 import socket
 
-from pycheckers.checkers import Board
+from pycheckers.checkers import Board, PlayerColor
 
 
 # The port number that the host should listen on
@@ -45,27 +30,27 @@ def get_local_ip() -> tuple[str, str]:
     momentarily connecting to Google's DNS server. If there is an error
     connecting, return the empty string.
     """
-    hn = socket.gethostname()
+    hostname = socket.gethostname()
     try:
         # Create a socket and connect to an external service (e.g., Google's DNS server)
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
         s.close()
-        return local_ip, hn
+        return local_ip, hostname
     except OSError:
-        return "", hn
+        return "", hostname
 
 
-def send_move(conn: socket.socket, board: Board, is_black=True) -> bool:
+def send_move(conn: socket.socket, board: Board, color: PlayerColor) -> bool:
     """
     Allow a player to select a move and send it to the other player. If the
     game ends as the result of the move, return True. is_black specifies which
     player is moving.
     """
     # Make a move
-    player = board._blackPlayer if is_black else board._redPlayer
-    move = player.takeTurn()
+    player = board.get_player(color)
+    move = player.take_turn()
 
     # Serialize and send move to the client
     packet = pickle.dumps(move)
@@ -78,7 +63,7 @@ def send_move(conn: socket.socket, board: Board, is_black=True) -> bool:
     return False
 
 
-def recv_move(conn: socket.socket, board: Board, is_black=True) -> bool:
+def recv_move(conn: socket.socket, board: Board, color: PlayerColor) -> bool:
     """
     Wait to receive a move from the other player, then update the board
     accordingly. If the game ends as the result of the move, return True.
@@ -90,10 +75,10 @@ def recv_move(conn: socket.socket, board: Board, is_black=True) -> bool:
         from_tile, move = pickle.loads(packet)
 
         # Update the board with the opponent's move
-        player = board._blackPlayer if is_black else board._redPlayer
+        player = board.get_player(color).opponent
 
-        if piece := player.getPiece(from_tile):
-            piece.doMove(board, move)
+        if piece := player.get_piece(from_tile):
+            piece.do_move(move)
         else:
             raise Exception("Received an invalid move from the opponent.")
 
@@ -103,7 +88,7 @@ def recv_move(conn: socket.socket, board: Board, is_black=True) -> bool:
         return True
 
 
-def start_server(ip="127.0.0.1", host="localhost"):
+def start_server(ip="127.0.0.1", host="localhost", color=PlayerColor.BLACK):
     """
     Host a checkers game as the given IP address or hostname.
 
@@ -124,11 +109,11 @@ def start_server(ip="127.0.0.1", host="localhost"):
             # Set up game
             board = Board()
 
-            while not (send_move(conn, board, is_black=True) or recv_move(conn, board, is_black=False)):
+            while not (send_move(conn, board, color) or recv_move(conn, board, color)):
                 pass
 
 
-def start_client(host="localhost") -> bool:
+def start_client(host="localhost", color=PlayerColor.RED) -> bool:
     """
     Join the checkers game hosted at the given IP address or hostname.
 
@@ -157,7 +142,7 @@ def start_client(host="localhost") -> bool:
         # Setup game
         board = Board(invert=True)
 
-        while not (recv_move(s, board, is_black=True) or send_move(s, board, is_black=False)):
+        while not (recv_move(s, board, color) or send_move(s, board, color)):
             pass
 
     return True  # success
@@ -185,9 +170,9 @@ def main():
 
                 if hj[0] == "H":
                     # Host
-                    myIP, myname = get_local_ip()
-                    if myIP:
-                        start_server(myIP, myname)
+                    my_ip, my_name = get_local_ip()
+                    if my_ip:
+                        start_server(my_ip, my_name)
                         break
                     else:
                         print("Error fetching local IP address.")
