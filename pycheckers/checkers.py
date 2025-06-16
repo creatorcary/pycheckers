@@ -145,10 +145,10 @@ class Board:
         status = ""
         while status != "loss":
             if turnColor == PlayerColor.BLACK:
-                status = self._blackPlayer.takeTurn(self)
+                status = self._blackPlayer.takeTurn()
                 turnColor = PlayerColor.RED
             else:
-                status = self._redPlayer.takeTurn(self)
+                status = self._redPlayer.takeTurn()
                 turnColor = PlayerColor.BLACK
         return turnColor
 
@@ -395,31 +395,34 @@ class Jump(typing.NamedTuple):
 class Player:
 
     def __init__(self, board: Board, color: PlayerColor):
+        self._board = board
         self._color = color
-        self._populate(board)
+        self._populate()
         self._selected: Piece | None = None
 
-    def _populate(self, board: Board):
+    def _populate(self):
         """Reset and populate the list of pieces this player controls."""
         startTile = 0 if self._color == PlayerColor.BLACK else HALF_BOARD_SIZE * (HALF_BOARD_SIZE + 1)
         self._pieces = [
-            Piece(board, self._color, tile)
+            Piece(self._board, self._color, tile)
             for tile in range(startTile, startTile + HALF_BOARD_SIZE * (HALF_BOARD_SIZE - 1))
         ]
 
-    def canJump(self, board: Board) -> bool:
+    @property
+    def canJump(self) -> bool:
         """
         :return: Any piece owned by this player can perform a jump.
         """
-        return any(piece.getJumps(board) for piece in self._pieces)
+        return any(piece.getJumps(self._board) for piece in self._pieces)
 
-    def hasMove(self, board: Board) -> bool:
+    @property
+    def hasMove(self) -> bool:
         """
         :return: A piece owned by this player can still move or jump.
         """
-        return any(piece.getMoves(board) or piece.getJumps(board) for piece in self._pieces)
+        return any(piece.getMoves(self._board) or piece.getJumps(self._board) for piece in self._pieces)
 
-    def takeTurn(self, board: Board) -> typing.Literal["loss"] | tuple[int, list[Jump]] | tuple[int, int]:
+    def takeTurn(self) -> typing.Literal["loss"] | tuple[int, list[Jump]] | tuple[int, int]:
         """Use mouse input to complete a turn.
 
         A clicked piece will be highlighted along with its available moves. Clicking on one of its available moves will
@@ -434,7 +437,7 @@ class Player:
 
             * If a move is chosen, the pair of numbers returned is the start tile and end tile of the moving piece.
         """
-        if not self.hasMove(board):
+        if not self.hasMove:
             return "loss"
 
         moves = ()
@@ -445,31 +448,31 @@ class Player:
         while True:
 
             if self._selected:  # piece already selected
-                click = board.window.getMouse()
+                click = self._board.window.getMouse()
                 doubleJump = False
 
                 for jump in jumps:  # if valid jump clicked: jump, deselect all and pass turn
-                    endTileLoc = board.getTile(jump.endTile).location
+                    endTileLoc = self._board.getTile(jump.endTile).location
                     if (
                         abs(click.getX() - endTileLoc.getX()) <= TILE_SIZE / 2
                         and abs(click.getY() - endTileLoc.getY()) <= TILE_SIZE / 2
                     ):
                         for tile in jumps:
-                            board.getTile(tile.endTile).deselect()
+                            self._board.getTile(tile.endTile).deselect()
 
                         if startTile < 0:
                             startTile = self._selected.tilenum
                         jumpedJumps.append(jump)
 
                         wasKing = self._selected.isKing
-                        board = self._selected.jumpTo(board, jump)
+                        self._board = self._selected.jumpTo(self._board, jump)
 
                         # Check for double jumps
-                        jumps = self._selected.getJumps(board)
+                        jumps = self._selected.getJumps(self._board)
                         if not (self._selected.isKing and not wasKing) and jumps:
                             doubleJump = True
                             for jump in jumps:
-                                board.getTile(jump.endTile).select()
+                                self._board.getTile(jump.endTile).select()
 
                         else:
                             self._selected.deselect()
@@ -478,17 +481,17 @@ class Player:
                             return (startTile, jumpedJumps)
 
                 for move in moves:  # if valid move clicked: move, deselect all, and pass turn
-                    moveLoc = board.getTile(move).location
+                    moveLoc = self._board.getTile(move).location
                     if (
                         abs(click.getX() - moveLoc.getX()) <= TILE_SIZE / 2
                         and abs(click.getY() - moveLoc.getY()) <= TILE_SIZE / 2
                     ):
                         for tile in moves:
-                            board.getTile(tile).deselect()
+                            self._board.getTile(tile).deselect()
 
                         packet = (self._selected.tilenum, move)  # encode the move for sending
 
-                        board = self._selected.moveTo(board, move)
+                        self._board = self._selected.moveTo(self._board, move)
                         self._selected.deselect()
                         self._selected = None
 
@@ -497,14 +500,14 @@ class Player:
                 # else, deselect all
                 if not doubleJump:
                     for tile in jumps:
-                        board.getTile(tile.endTile).deselect()
+                        self._board.getTile(tile.endTile).deselect()
                     for tile in moves:
-                        board.getTile(tile).deselect()
+                        self._board.getTile(tile).deselect()
                     self._selected.deselect()
                     self._selected = None
 
             else:  # no pieces selected
-                click = board.window.getMouse()
+                click = self._board.window.getMouse()
                 for p in self._pieces:  # if player piece clicked, select all
                     pLoc = p.location
                     if (
@@ -513,14 +516,14 @@ class Player:
                     ):
                         self._selected = p
                         self._selected.select()
-                        if self.canJump(board):
-                            jumps = self._selected.getJumps(board)
+                        if self.canJump:
+                            jumps = self._selected.getJumps(self._board)
                             for jump in jumps:
-                                board.getTile(jump.endTile).select()
+                                self._board.getTile(jump.endTile).select()
                         else:
-                            moves = self._selected.getMoves(board)
+                            moves = self._selected.getMoves(self._board)
                             for tile in moves:
-                                board.getTile(tile).select()
+                                self._board.getTile(tile).select()
                         break
 
     def killPiece(self, tilenum: int):
@@ -558,29 +561,29 @@ class CPUPlayer(Player):
         op_score = sum(2 if piece.isKing else 1 for piece in board.getOpponent(self._color).pieces)
         return my_score - op_score
 
-    def takeTurn(self, board: Board) -> typing.Literal["loss"] | None:
+    def takeTurn(self) -> typing.Literal["loss"] | None:
         """Make a random legal move.
 
         :return: `"loss"` if unable to make a move.
         """
-        if not self.hasMove(board):
+        if not self.hasMove:
             return "loss"
 
         time.sleep(CPU_DELAY)
-        if self.canJump(board):
-            jumps = [(piece, jump) for piece in self._pieces for jump in piece.getJumps(board)]
+        if self.canJump:
+            jumps = [(piece, jump) for piece in self._pieces for jump in piece.getJumps(self._board)]
             piece, jump = random.choice(jumps)
             wasKing = piece.isKing
-            board = piece.jumpTo(board, jump)
+            board = piece.jumpTo(self._board, jump)
 
             if not (piece.isKing and not wasKing):
                 while jumps := piece.getJumps(board):
                     time.sleep(CPU_DELAY)
                     board = piece.jumpTo(board, random.choice(jumps))
         else:
-            moves = [(piece, move) for piece in self._pieces for move in piece.getMoves(board)]
+            moves = [(piece, move) for piece in self._pieces for move in piece.getMoves(self._board)]
             piece, move = random.choice(moves)
-            board = piece.moveTo(board, move)
+            board = piece.moveTo(self._board, move)
 
         self._genScore(board)  # BUGTEST
 

@@ -65,7 +65,7 @@ def send_move(conn: socket.socket, board: Board, is_black=True) -> bool:
     """
     # Make a move
     player = board._blackPlayer if is_black else board._redPlayer
-    move = player.takeTurn(board)
+    move = player.takeTurn()
 
     # Serialize and send move to the client
     packet = pickle.dumps(move)
