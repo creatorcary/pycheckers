@@ -605,10 +605,10 @@ class CPUPlayer(Player):
             was_king = piece.is_king
             piece.jump_to(jump)
 
-            if not (piece.is_king and not was_king):
-                while jumps := piece.jumps:
-                    time.sleep(CPU_DELAY)
-                    piece.jump_to(random.choice(jumps))
+            while (not (piece.is_king and not was_king)) and (jumps := piece.jumps):
+                time.sleep(CPU_DELAY)
+                was_king = piece.is_king
+                piece.jump_to(random.choice(jumps))
         else:
             moves = [(piece, move) for piece in self._pieces for move in piece.moves]
             piece, move = random.choice(moves)
