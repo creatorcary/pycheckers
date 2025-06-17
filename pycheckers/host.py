@@ -45,8 +45,7 @@ def get_local_ip() -> tuple[str, str]:
 def send_move(conn: socket.socket, board: Board, color: PlayerColor) -> bool:
     """
     Allow a player to select a move and send it to the other player. If the
-    game ends as the result of the move, return True. is_black specifies which
-    player is moving.
+    game ends as the result of the move, return `True`.
     """
     # Make a move
     player = board.get_player(color)
@@ -66,29 +65,29 @@ def send_move(conn: socket.socket, board: Board, color: PlayerColor) -> bool:
 def recv_move(conn: socket.socket, board: Board, color: PlayerColor) -> bool:
     """
     Wait to receive a move from the other player, then update the board
-    accordingly. If the game ends as the result of the move, return True.
-    is_black specifies which player is moving.
+    accordingly. If the game ends as the result of the move, return `True`.
     """
     # Wait for a move from the client
-    packet = conn.recv(1024)
-    try:
-        from_tile, move = pickle.loads(packet)
+    packet = pickle.loads(conn.recv(1024))
 
-        # Update the board with the opponent's move
-        player = board.get_player(color).opponent
-
-        if piece := player.get_piece(from_tile):
-            piece.do_move(move)
-        else:
-            raise Exception("Received an invalid move from the opponent.")
-
-        return False
-    except ValueError:
+    if packet == "loss":
         print("You won!")
         return True
 
+    from_tile, move = packet
 
-def start_server(ip="127.0.0.1", host="localhost", color=PlayerColor.BLACK):
+    # Update the board with the opponent's move
+    player = board.get_player(color).opponent
+
+    if piece := player.get_piece(from_tile):
+        piece.do_move(move)
+    else:
+        raise Exception("Received an invalid move from the opponent.")
+
+    return False
+
+
+def start_server(ip="127.0.0.1", host="localhost"):
     """
     Host a checkers game as the given IP address or hostname.
 
@@ -96,6 +95,8 @@ def start_server(ip="127.0.0.1", host="localhost", color=PlayerColor.BLACK):
     first. Alternate sending moves back and forth over the network connection
     until someone wins the game. Then terminate the connection.
     """
+    color = PlayerColor.BLACK
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((ip, PORT))
         s.listen(1)
@@ -113,7 +114,7 @@ def start_server(ip="127.0.0.1", host="localhost", color=PlayerColor.BLACK):
                 pass
 
 
-def start_client(host="localhost", color=PlayerColor.RED) -> bool:
+def start_client(host="localhost") -> bool:
     """
     Join the checkers game hosted at the given IP address or hostname.
 
@@ -122,6 +123,7 @@ def start_client(host="localhost", color=PlayerColor.RED) -> bool:
     network connection until someone wins the game. Then terminate the
     connection.
     """
+    color = PlayerColor.RED
     print(f"Joining {host}...")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -191,10 +193,12 @@ def main():
                     # Nothing entered
                     print("Enter an option.")
         case 1:
+            # Singleplayer
             board = Board(players)
             winner = board.play_one()
             print(f"{winner.capitalize()} player won.")
         case 0:
+            # Simulation
             games = int(input("How many sims? "))
             board = Board(players)
             if games > 1:

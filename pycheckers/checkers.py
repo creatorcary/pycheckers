@@ -141,7 +141,7 @@ class Board:
             else:
                 status = self._red_player.take_turn()
                 turn_color = PlayerColor.BLACK
-        self._reset()
+        self.reset()
         return turn_color
 
     @typing.overload
@@ -164,11 +164,13 @@ class Board:
 
         return wins
 
-    def _reset(self):
-        """Reset the tiles list and undraw all pieces."""
+    def reset(self):
+        """Reset the board for a new game."""
         for piece in self._black_player.pieces + self._red_player.pieces:
             piece.undraw()
-        self._populate()
+        for tile in self._tiles:
+            tile.deselect()
+            tile.set_occupied(False)
         self._black_player._populate()
         self._red_player._populate()
 
@@ -474,7 +476,7 @@ class Player:
                 click = board.window.getMouse()
                 double_jump = False
 
-                for jump in jumps:  # if valid jump clicked: jump, deselect all and pass turn
+                for jump in jumps:  # if valid jump clicked: jump, deselect all, and pass turn
                     end_tile_loc = board.get_tile(jump.end_tile).location
                     if (
                         abs(click.getX() - end_tile_loc.getX()) <= TILE_SIZE / 2
@@ -499,8 +501,6 @@ class Player:
 
                         else:
                             selected.deselect()
-                            selected = None
-
                             return start_tile, jumped_jumps
 
                 for move in moves:  # if valid move clicked: move, deselect all, and pass turn
@@ -512,13 +512,11 @@ class Player:
                         for tile in moves:
                             board.get_tile(tile).deselect()
 
-                        packet = (selected.tilenum, move)  # encode the move for sending
-
+                        move_tiles = (selected.tilenum, move)
                         selected.move_to(move)
                         selected.deselect()
-                        selected = None
 
-                        return packet
+                        return move_tiles
 
                 # else, deselect all
                 if not double_jump:
